@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตะกร้าสินค้า - PP PHONE</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="db.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-[#f7f6f2] min-h-screen text-gray-800 flex flex-col">
+
+  <!-- Navigation Bar -->
+  <nav class="bg-white border-b border-gray-100 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full border-2 border-[#a17d1a] flex flex-col items-center justify-center text-[#a17d1a]">
+          <span class="text-[11px] font-extrabold leading-none">PP</span>
+          <span class="text-[7px] font-bold tracking-tighter leading-none mt-0.5">PHONE</span>
+        </div>
+        <span class="text-xl font-extrabold text-[#a17d1a] tracking-wider">PP PHONE</span>
+      </a>
+
+      <div class="flex items-center gap-6 text-xs font-semibold text-gray-500">
+        <a href="index.html" class="hover:text-[#8a6e11] transition"><i class="fa-solid fa-arrow-left mr-1"></i> เลือกซื้อสินค้าต่อ</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-6 py-8 flex-1 w-full">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+      <i class="fa-solid fa-cart-shopping text-[#a17d1a]"></i> ตะกร้าสินค้าของคุณ
+    </h1>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- รายการสินค้า -->
+      <div class="lg:col-span-2 space-y-4" id="cartList">
+        <div class="bg-white rounded-2xl p-8 text-center text-gray-400 font-light shadow-sm">
+          กำลังโหลดข้อมูลตะกร้าสินค้า...
+        </div>
+      </div>
+
+      <!-- สรุปยอดสั่งซื้อ -->
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 h-fit space-y-4">
+        <h2 class="text-base font-bold text-gray-900 border-b pb-3">สรุปรายการสั่งซื้อ</h2>
+        
+        <div class="space-y-2 text-xs font-light text-gray-600">
+          <div class="flex justify-between">
+            <span>ราคารวมสินค้า</span>
+            <span id="subtotalPrice" class="font-bold text-gray-800">฿0</span>
+          </div>
+          <div class="flex justify-between">
+            <span>ค่าจัดส่ง</span>
+            <span class="text-emerald-600 font-medium">ฟรี</span>
+          </div>
+        </div>
+
+        <div class="border-t pt-3 flex justify-between items-center">
+          <span class="font-bold text-sm text-gray-900">ยอดรวมทั้งหมด</span>
+          <span id="totalPrice" class="text-xl font-extrabold text-[#a17d1a]">฿0</span>
+        </div>
+
+        <button onclick="checkout()" id="checkoutBtn" class="w-full bg-[#a17d1a] hover:bg-[#896914] text-white py-3 rounded-xl text-xs font-bold transition shadow-sm mt-4">
+          ดำเนินการชำระเงิน
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let currentUser = {};
+    let cartItems = [];
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      
+      const userId = getUserId();
+      if (!userId) {
+        alert('กรุณาล็อกอินเข้าสู่ระบบก่อนดูตะกร้าสินค้า');
+        window.location.href = 'login.html';
+        return;
+      }
+      await loadCart();
+    });
+
+    // ดึง User ID รองรับทั้ง ID ตรง และแบบอยู่ใน userData
+    function getUserId() {
+      if (!currentUser) return null;
+      return currentUser.id 
+          || currentUser.user_id 
+          || currentUser.userId 
+          || (currentUser.userData && currentUser.userData.id)
+          || (currentUser.user && currentUser.user.id) 
+          || null;
+    }
+
+    // ดึงข้อมูลสินค้าในตะกร้าจาก Supabase
+    async function loadCart() {
+      const cartContainer = document.getElementById('cartList');
+      const userId = getUserId();
+
+      try {
+        const client = DB.getClient ? DB.getClient() : null;
+        if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
+
+        // ดึงรายการในตาราง cart
+        const { data: cartData, error: cartError } = await client
+          .from('cart')
+          .select('*')
+          .eq('user_id', userId);
+
+        if (cartError) throw cartError;
+
+        if (!cartData || cartData.length === 0) {
+          cartContainer.innerHTML = `
+            <div class="bg-white rounded-2xl p-12 text-center text-gray-400 font-light shadow-sm">
+              <i class="fa-solid fa-basket-shopping text-4xl mb-3 text-gray-300"></i>
+              <p>ไม่มีสินค้าในตะกร้าของคุณ</p>
+              <a href="index.html" class="inline-block mt-4 bg-[#a17d1a] text-white text-xs px-5 py-2 rounded-xl font-bold">ไปเลือกซื้อสินค้า</a>
+            </div>`;
+          updateSummary(0);
+          return;
+        }
+
+        // ดึงรายละเอียดสินค้า
+        const productIds = cartData.map(item => item.product_id);
+        const { data: productsData, error: prodError } = await client
+          .from('products')
+          .select('*')
+          .in('id', productIds);
+
+        if (prodError) throw prodError;
+
+        cartItems = cartData.map(item => {
+          const product = (productsData || []).find(p => p.id === item.product_id) || {};
+          return {
+            cart_id: item.id,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            ...product
+          };
+        });
+
+        renderCart();
+
+      } catch (err) {
+        console.error('Error loading cart:', err);
+        cartContainer.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-red-500 text-xs">เกิดข้อผิดพลาด: ${err.message}</div>`;
+      }
+    }
+
+    // แสดงผลรายการสินค้า
+    function renderCart() {
+      const cartContainer = document.getElementById('cartList');
+      cartContainer.innerHTML = '';
+
+      let grandTotal = 0;
+
+      cartItems.forEach(item => {
+        const itemTotal = Number(item.price || 0) * item.quantity;
+        grandTotal += itemTotal;
+
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center gap-4 justify-between';
+        
+        card.innerHTML = `
+          <div class="flex items-center gap-4 w-full sm:w-auto">
+            <div class="w-20 h-20 bg-[#f7f6f2] rounded-xl flex items-center justify-center shrink-0 p-2">
+              <img src="${item.image_url || 'https://via.placeholder.com/150'}" alt="${item.name || 'สินค้า'}" class="object-contain h-full w-full">
+            </div>
+            <div>
+              <span class="text-[10px] font-mono text-[#8a6e11] font-bold">รหัส: ${item.code || item.product_id}</span>
+              <h3 class="font-bold text-gray-900 text-sm line-clamp-1">${item.name || 'ไม่พบชื่อสินค้า'}</h3>
+              <p class="text-xs text-gray-500 font-semibold mt-1">฿${Number(item.price || 0).toLocaleString()}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0">
+            <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+              <button onclick="updateQuantity('${item.cart_id}', ${item.quantity - 1})" class="px-3 py-1 text-gray-600 hover:bg-gray-200 text-xs font-bold">-</button>
+              <span class="px-3 py-1 text-xs font-bold text-gray-800 bg-white">${item.quantity}</span>
+              <button onclick="updateQuantity('${item.cart_id}', ${item.quantity + 1})" class="px-3 py-1 text-gray-600 hover:bg-gray-200 text-xs font-bold">+</button>
+            </div>
+
+            <span class="text-sm font-extrabold text-gray-900 w-24 text-right">฿${itemTotal.toLocaleString()}</span>
+
+            <button onclick="removeItem('${item.cart_id}')" class="text-gray-400 hover:text-red-500 text-xs p-1 transition" title="ลบออกจากตะกร้า">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `;
+
+        cartContainer.appendChild(card);
+      });
+
+      updateSummary(grandTotal);
+    }
+
+    async function updateQuantity(cartId, newQty) {
+      if (newQty <= 0) {
+        await removeItem(cartId);
+        return;
+      }
+
+      try {
+        const client = DB.getClient();
+        const { error } = await client
+          .from('cart')
+          .update({ quantity: newQty })
+          .eq('id', cartId);
+
+        if (error) throw error;
+        await loadCart();
+      } catch (err) {
+        alert('ไม่สามารถอัปเดตจำนวนได้: ' + err.message);
+      }
+    }
+
+    async function removeItem(cartId) {
+      if (!confirm('ต้องการลบสินค้านี้ออกจากตะกร้าใช่หรือไม่?')) return;
+
+      try {
+        const client = DB.getClient();
+        const { error } = await client
+          .from('cart')
+          .delete()
+          .eq('id', cartId);
+
+        if (error) throw error;
+        await loadCart();
+      } catch (err) {
+        alert('เกิดข้อผิดพลาดในการลบสินค้า: ' + err.message);
+      }
+    }
+
+    function updateSummary(total) {
+      document.getElementById('subtotalPrice').innerText = `฿${total.toLocaleString()}`;
+      document.getElementById('totalPrice').innerText = `฿${total.toLocaleString()}`;
+    }
+
+    // ฟังก์ชันสั่งซื้อ (บันทึกข้อมูลลงตาราง orders และ order_items)
+    async function checkout() {
+      if (cartItems.length === 0) {
+        alert('ไม่มีสินค้าในตะกร้า');
+        return;
+      }
+
+      const userId = getUserId();
+      if (!userId) {
+        alert('ไม่พบข้อมูลผู้ใช้งาน กรุณาล็อกอินใหม่');
+        window.location.href = 'login.html';
+        return;
+      }
+
+      if (!confirm('ยืนยันการชำระเงินและสั่งซื้อสินค้า?')) return;
+
+      try {
+        const client = DB.getClient ? DB.getClient() : null;
+        if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
+
+        const grandTotal = cartItems.reduce((sum, item) => sum + (Number(item.price || 0) * item.quantity), 0);
+        
+        const userAddress = currentUser.address || (currentUser.userData && currentUser.userData.address) || '';
+        const userPhone = currentUser.phone || (currentUser.userData && currentUser.userData.phone) || '';
+
+        // 1. บันทึกลงตาราง orders (ใช้คอลัมน์ total_amount ตรงกับ Schema ใหม่)
+        const { data: orderData, error: orderError } = await client
+          .from('orders')
+          .insert([{
+            user_id: userId,
+            total_amount: grandTotal,
+            status: 'pending',
+            shipping_address: userAddress,
+            phone: userPhone
+          }])
+          .select();
+
+        if (orderError) throw orderError;
+
+        const newOrderId = orderData[0].id;
+
+        // 2. บันทึกลงตาราง order_items
+        const orderItemsPayload = cartItems.map(item => ({
+          order_id: newOrderId,
+          product_id: item.product_id,
+          price: Number(item.price || 0),
+          quantity: item.quantity
+        }));
+
+        const { error: itemsError } = await client
+          .from('order_items')
+          .insert(orderItemsPayload);
+
+        if (itemsError) throw itemsError;
+
+        // 3. ลบสินค้าออกจากตะกร้า
+        const { error: clearError } = await client
+          .from('cart')
+          .delete()
+          .eq('user_id', userId);
+
+        if (clearError) throw clearError;
+
+        alert('สั่งซื้อสินค้าเรียบร้อยแล้ว!');
+        window.location.href = 'order-history.html';
+
+      } catch (err) {
+        console.error('Checkout error:', err);
+        alert('เกิดข้อผิดพลาดในการสั่งซื้อ: ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>

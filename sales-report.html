@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>รายงานยอดขาย - PP PHONE</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="db.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
+    body { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-[#f7f6f2] min-h-screen text-gray-800 flex flex-col">
+
+  <!-- Navigation Bar -->
+  <nav class="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      
+      <!-- Logo -->
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full border-2 border-[#a17d1a] flex flex-col items-center justify-center text-[#a17d1a]">
+          <span class="text-[11px] font-extrabold leading-none">PP</span>
+          <span class="text-[7px] font-bold tracking-tighter leading-none mt-0.5">PHONE</span>
+        </div>
+        <span class="text-xl font-extrabold text-[#a17d1a] tracking-wider">PP PHONE</span>
+      </a>
+
+      <!-- Menu Navigation -->
+      <div class="hidden md:flex items-center gap-8 text-xs font-semibold text-gray-500">
+        <a href="index.html" class="hover:text-[#8a6e11] transition">สินค้า</a>
+        <a href="order-history.html" class="hover:text-[#8a6e11] transition">ประวัติการสั่งซื้อ</a>
+        <a href="manage-products.html" id="linkManage" class="hover:text-[#8a6e11] transition hidden">จัดการสินค้า</a>
+        <a href="sales-report.html" class="text-[#8a6e11] font-bold border-b-2 border-[#8a6e11] pb-1">รายงานยอดขาย</a>
+      </div>
+
+      <!-- User Profile & Cart Icon -->
+      <div class="flex items-center gap-3">
+        <a href="cart.html" id="cartBtn" class="relative w-9 h-9 rounded-full bg-[#8a6e11] text-white flex items-center justify-center shadow-sm hover:opacity-90 transition">
+          <i class="fa-solid fa-cart-shopping text-xs"></i>
+          <span id="cartCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">0</span>
+        </a>
+        
+        <div class="flex items-center gap-2">
+          <a href="login.html" id="userBadge" class="w-9 h-9 rounded-full bg-[#8a6e11] text-white flex items-center justify-center shadow-sm hover:opacity-90 transition">
+            <i class="fa-solid fa-user text-xs"></i>
+          </a>
+          <button onclick="logout()" id="logoutBtn" class="hidden text-xs text-red-500 font-bold hover:underline ml-1">
+            ออกจากระบบ
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full">
+
+    <!-- Page Header -->
+    <div class="mb-8">
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-gray-900">รายงานยอดขาย</h1>
+      <p class="text-xs sm:text-sm text-gray-400 font-medium mt-1">สรุปประสิทธิภาพภาพรวมยอดขาย แยกหมวดหมู่สินค้า PP PHONE</p>
+    </div>
+
+    <!-- Summary KPI Cards Grid (4 Columns) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-8">
+      
+      <!-- Card 1: ยอดขายรวม -->
+      <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between h-36 hover:shadow-md transition">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-gray-400">ยอดขายรวม</span>
+          <div class="w-10 h-10 rounded-xl bg-[#fdfbf7] border border-[#f0e8d5] text-[#a17d1a] flex items-center justify-center">
+            <i class="fa-solid fa-money-bill-wave text-sm"></i>
+          </div>
+        </div>
+        <div>
+          <div id="statTotalRevenue" class="text-2xl sm:text-3xl font-extrabold text-gray-900">฿0</div>
+          <span class="text-[11px] text-emerald-600 font-medium mt-1 inline-block">รายได้รวมสุทธิ</span>
+        </div>
+      </div>
+
+      <!-- Card 2: จำนวนรวมสินค้า -->
+      <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between h-36 hover:shadow-md transition">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-gray-400">จำนวนรวมสินค้า</span>
+          <div class="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center">
+            <i class="fa-solid fa-boxes-stacked text-sm"></i>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-baseline gap-2">
+            <span id="statTotalItemsSold" class="text-2xl sm:text-3xl font-extrabold text-gray-900">0</span>
+            <span class="text-xs font-bold text-gray-500">ชิ้น/เครื่อง</span>
+          </div>
+          <span class="text-[11px] text-purple-600 font-medium mt-1 inline-block">iPhone&Accessory</span>
+        </div>
+      </div>
+
+      <!-- Card 3: ขาย iPhone -->
+      <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between h-36 hover:shadow-md transition">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-gray-400">ยอดขาย iPhone</span>
+          <div class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center">
+            <i class="fa-solid fa-mobile-screen-button text-sm"></i>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-baseline gap-2">
+            <span id="statIphoneSold" class="text-2xl sm:text-3xl font-extrabold text-gray-900">0</span>
+            <span class="text-xs font-bold text-gray-500">เครื่อง</span>
+          </div>
+          <span class="text-[11px] text-blue-600 font-medium mt-1 inline-block">IPHONE</span>
+        </div>
+      </div>
+
+      <!-- Card 4: ขาย Accessory -->
+      <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between h-36 hover:shadow-md transition">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-gray-400">ยอดขาย Accessory</span>
+          <div class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center">
+            <i class="fa-solid fa-headphones text-sm"></i>
+          </div>
+        </div>
+        <div>
+          <div class="flex items-baseline gap-2">
+            <span id="statAccessorySold" class="text-2xl sm:text-3xl font-extrabold text-gray-900">0</span>
+            <span class="text-xs font-bold text-gray-500">ชิ้น</span>
+          </div>
+          <span class="text-[11px] text-amber-600 font-medium mt-1 inline-block">Accessory</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Top Selling Products Container -->
+    <div class="bg-white rounded-2xl p-6 sm:p-7 border border-gray-100 shadow-sm">
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+        <div>
+          <h2 class="text-lg font-extrabold text-gray-900">อันดับสินค้าขายดี</h2>
+  
+        </div>
+        <span class="text-xs font-semibold text-[#8a6e11] bg-[#fdfbf7] px-3 py-1 rounded-full border border-[#f0e8d5]">
+          <i class="fa-solid fa-fire text-amber-500 mr-1"></i> Best Sellers
+        </span>
+      </div>
+      
+      <div id="topSellersList" class="space-y-3">
+        <!-- รายการสินค้าจะแสดงด้วย JS -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Logic Script -->
+  <script>
+    let currentUser = {};
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      
+      if (currentUser.role !== 'admin' && currentUser.role !== 'staff') {
+        alert('หน้านี้สำหรับสิทธิ์ Admin และ Staff เท่านั้น');
+        window.location.href = 'index.html';
+        return;
+      }
+
+      applyRolePermissions();
+      await loadSalesReport();
+    });
+
+    function applyRolePermissions() {
+      const linkManage = document.getElementById('linkManage');
+      const cartBtn = document.getElementById('cartBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+
+      if (currentUser.username || currentUser.id) {
+        if (logoutBtn) logoutBtn.classList.remove('hidden');
+      }
+
+      if (currentUser.role === 'admin' || currentUser.role === 'staff') {
+        if (linkManage) linkManage.classList.remove('hidden');
+      }
+      if (cartBtn) cartBtn.classList.add('hidden');
+    }
+
+    async function loadSalesReport() {
+      let orders = [];
+      let orderItems = [];
+      let productsList = [];
+
+      try {
+        const client = DB.getClient ? DB.getClient() : null;
+        if (client) {
+          const [ordersRes, itemsRes, productsRes] = await Promise.all([
+            client.from('orders').select('*'),
+            client.from('order_items').select('*'),
+            client.from('products').select('*')
+          ]);
+
+          if (!ordersRes.error && ordersRes.data) orders = ordersRes.data;
+          if (!itemsRes.error && itemsRes.data) orderItems = itemsRes.data;
+          if (!productsRes.error && productsRes.data) productsList = productsRes.data;
+        }
+      } catch (err) {
+        console.error('Error fetching data from Supabase:', err);
+      }
+
+      // fallback
+      if (!orders || orders.length === 0) {
+        const localOrders = JSON.parse(localStorage.getItem('pp_orders') || localStorage.getItem('orders') || '[]');
+        if (localOrders.length > 0) orders = localOrders;
+      }
+
+      renderReport(orders, orderItems, productsList);
+    }
+
+    function renderReport(orders, orderItems = [], productsList = []) {
+      const productDbMap = {};
+      productsList.forEach(p => {
+        if (p.id) productDbMap[String(p.id)] = p;
+        if (p.name) productDbMap[p.name.trim()] = p;
+        if (p.code) productDbMap[p.code.trim()] = p;
+      });
+
+      const productSalesMap = {};
+      let iphoneSoldTotal = 0;
+      let accessorySoldTotal = 0;
+
+      // Helper ฟังก์ชันตรวจแยกประเภท
+      const isIphoneCategory = (cat = '', name = '') => {
+        const c = String(cat).toLowerCase();
+        const n = String(name).toLowerCase();
+        return c.includes('iphone') || c.includes('phone') || c.includes('IPHONE') || n.includes('iphone') || n.includes('16pm') || n.includes('15pm');
+      };
+
+      // 1. ดึงข้อมูลสินค้าจาก order_items
+      if (orderItems && orderItems.length > 0) {
+        orderItems.forEach(item => {
+          const pId = String(item.product_id || item.id || '');
+          const pDb = productDbMap[pId] || productDbMap[item.name] || productDbMap[item.product_name] || {};
+
+          const name = item.name || item.product_name || item.title || pDb.name || 'สินค้าทั่วไป';
+          const code = item.code || item.product_code || item.sku || pDb.code || pDb.sku || (pId ? `P-${pId}` : `PROD-${name.substring(0,3).toUpperCase()}`);
+          const price = Number(item.price || item.unit_price || pDb.price || 0);
+          const qty = Number(item.quantity || item.qty || item.count || 1);
+          const categoryRaw = item.category || pDb.category || '';
+
+          const isPhone = isIphoneCategory(categoryRaw, name);
+          const categoryDisplay = isPhone ? 'IPHONE' : 'accessory';
+          const unitText = isPhone ? 'เครื่อง' : 'ชิ้น';
+          const imageUrl = item.image_url || item.image || item.img || pDb.image_url || pDb.image || 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=200&auto=format&fit=crop';
+
+          if (isPhone) {
+            iphoneSoldTotal += qty;
+          } else {
+            accessorySoldTotal += qty;
+          }
+
+          const uniqueKey = code + '_' + name;
+
+          if (!productSalesMap[uniqueKey]) {
+            productSalesMap[uniqueKey] = {
+              code: code,
+              name: name,
+              category: categoryDisplay,
+              price: price,
+              image_url: imageUrl,
+              soldCount: 0,
+              unitText: unitText
+            };
+          }
+          productSalesMap[uniqueKey].soldCount += qty;
+        });
+      }
+
+      // 2. ถ้า order_items ไม่มี ให้ใช้อาร์เรย์จากตาราง orders
+      if (Object.keys(productSalesMap).length === 0 && orders.length > 0) {
+        orders.forEach(order => {
+          let items = order.items || order.order_items || order.cart || order.products || [];
+          if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch (e) { items = []; }
+          }
+          if (!Array.isArray(items) && typeof items === 'object') {
+            items = Object.values(items);
+          }
+
+          items.forEach(item => {
+            const pId = String(item.product_id || item.id || '');
+            const pDb = productDbMap[pId] || productDbMap[item.name] || {};
+
+            const name = item.name || item.title || item.product_name || pDb.name || 'สินค้าทั่วไป';
+            const code = item.code || item.product_code || item.sku || pDb.code || pDb.sku || (pId ? `P-${pId}` : `PROD-${name.substring(0,3).toUpperCase()}`);
+            const price = Number(item.price || item.unit_price || pDb.price || 0);
+            const qty = Number(item.quantity || item.qty || item.count || 1);
+            const categoryRaw = item.category || pDb.category || '';
+
+            const isPhone = isIphoneCategory(categoryRaw, name);
+            const categoryDisplay = isPhone ? 'IPHONE' : 'accessory';
+            const unitText = isPhone ? 'เครื่อง' : 'ชิ้น';
+            const imageUrl = item.image_url || item.image || item.img || pDb.image_url || pDb.image || 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=200&auto=format&fit=crop';
+
+            if (isPhone) {
+              iphoneSoldTotal += qty;
+            } else {
+              accessorySoldTotal += qty;
+            }
+
+            const uniqueKey = code + '_' + name;
+
+            if (!productSalesMap[uniqueKey]) {
+              productSalesMap[uniqueKey] = {
+                code: code,
+                name: name,
+                category: categoryDisplay,
+                price: price,
+                image_url: imageUrl,
+                soldCount: 0,
+                unitText: unitText
+              };
+            }
+            productSalesMap[uniqueKey].soldCount += qty;
+          });
+        });
+      }
+
+      // คำนวณยอดขายรวม
+      let totalRevenue = 0;
+      orders.forEach(order => {
+        totalRevenue += Number(order.total_amount || order.total_price || order.total || order.grand_total || order.price || 0);
+      });
+
+      if (totalRevenue === 0) {
+        Object.values(productSalesMap).forEach(item => {
+          totalRevenue += (item.price * item.soldCount);
+        });
+      }
+
+      // จำนวนขายรวมทั้งหมด (iPhone + Accessory)
+      const totalItemsSold = iphoneSoldTotal + accessorySoldTotal;
+
+      // แสดงผล KPI ทั้ง 4 ช่อง
+      document.getElementById('statTotalRevenue').innerText = `฿${totalRevenue.toLocaleString()}`;
+      document.getElementById('statTotalItemsSold').innerText = totalItemsSold.toLocaleString();
+      document.getElementById('statIphoneSold').innerText = iphoneSoldTotal.toLocaleString();
+      document.getElementById('statAccessorySold').innerText = accessorySoldTotal.toLocaleString();
+
+      // จัดเรียงสินค้าขายดี
+      let topSellers = Object.values(productSalesMap).sort((a, b) => b.soldCount - a.soldCount);
+
+      const listContainer = document.getElementById('topSellersList');
+      listContainer.innerHTML = '';
+
+      if (topSellers.length === 0) {
+        listContainer.innerHTML = `
+          <div class="text-center py-12 text-gray-400 text-xs">
+            ไม่พบข้อมูลสินค้าขายดีในระบบ
+          </div>
+        `;
+        return;
+      }
+
+      // Render สินค้าขายดี
+      topSellers.forEach(item => {
+        const itemRow = document.createElement('div');
+        itemRow.className = 'flex items-center justify-between p-3 sm:p-4 border border-gray-100 rounded-xl hover:bg-gray-50/80 transition';
+
+        const categoryBadgeClass = item.category === 'IPHONE'
+          ? 'text-[#8a6e11] bg-[#fdfbf7] border-[#f0e8d5]'
+          : 'text-amber-700 bg-amber-50 border-amber-200';
+
+        itemRow.innerHTML = `
+          <div class="flex items-center gap-4">
+            <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white flex items-center justify-center overflow-hidden flex-shrink-0 p-1 border border-gray-100 shadow-sm">
+              <img src="${item.image_url}" alt="${item.name}" class="object-contain h-full w-full" onerror="this.src='https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=200&auto=format&fit=crop'">
+            </div>
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-[10px] sm:text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded">รหัส: ${item.code}</span>
+                <span class="text-[10px] sm:text-xs font-bold border px-2 py-0.5 rounded ${categoryBadgeClass}">${item.category}</span>
+              </div>
+              <h3 class="font-extrabold text-gray-900 text-sm sm:text-base line-clamp-1">${item.name}</h3>
+            </div>
+          </div>
+          <div class="text-right pl-4">
+            <div class="text-sm sm:text-base font-extrabold text-[#8a6e11]">฿${Number(item.price).toLocaleString()}</div>
+            <div class="text-[10px] sm:text-xs font-bold text-emerald-600 mt-1 bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block">ขายแล้ว ${item.soldCount} ${item.unitText}</div>
+          </div>
+        `;
+
+        listContainer.appendChild(itemRow);
+      });
+    }
+
+    function logout() {
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('userSession');
+      window.location.href = 'login.html';
+    }
+  </script>
+</body>
+</html>

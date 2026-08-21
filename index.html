@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>หน้าแรก - PP PHONE</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="db.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
+    body { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-[#f7f6f2] min-h-screen text-gray-800 flex flex-col">
+
+  <!-- Navigation Bar -->
+  <nav class="bg-white border-b border-gray-100 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      
+      <!-- Logo -->
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full border-2 border-[#a17d1a] flex flex-col items-center justify-center text-[#a17d1a]">
+          <span class="text-[11px] font-extrabold leading-none">PP</span>
+          <span class="text-[7px] font-bold tracking-tighter leading-none mt-0.5">PHONE</span>
+        </div>
+        <span class="text-xl font-extrabold text-[#a17d1a] tracking-wider">PP PHONE</span>
+      </a>
+
+      <!-- Menu Navigation -->
+      <div class="hidden md:flex items-center gap-8 text-xs font-semibold text-gray-500">
+        <a href="index.html" class="text-[#8a6e11] font-bold border-b-2 border-[#8a6e11] pb-1">สินค้า</a>
+        <a href="order-history.html" class="hover:text-[#8a6e11] transition">ประวัติการสั่งซื้อ</a>
+        <a href="manage-products.html" id="linkManage" class="hover:text-[#8a6e11] transition hidden">จัดการสินค้า</a>
+        <a href="sales-report.html" id="linkReport" class="hover:text-[#8a6e11] transition hidden">รายงานยอดขาย</a>
+      </div>
+
+      <!-- User Profile & Cart Icon -->
+      <div class="flex items-center gap-3">
+        <!-- ไอคอนตะกร้าสินค้า (แสดงเฉพาะ ลูกค้า) -->
+        <a href="cart.html" id="cartBtn" class="relative w-9 h-9 rounded-full bg-[#8a6e11] text-white flex items-center justify-center shadow-sm hover:opacity-90 transition">
+          <i class="fa-solid fa-cart-shopping text-xs"></i>
+          <span id="cartCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">0</span>
+        </a>
+        
+        <!-- ข้อมูลโปรไฟล์ / ปุ่มออกจากระบบ -->
+        <div class="flex items-center gap-2">
+          <a href="login.html" id="userBadge" class="w-9 h-9 rounded-full bg-[#8a6e11] text-white flex items-center justify-center shadow-sm hover:opacity-90 transition">
+            <i class="fa-solid fa-user text-xs"></i>
+          </a>
+          <button onclick="logout()" id="logoutBtn" class="hidden text-xs text-red-500 font-bold hover:underline ml-1">
+            ออกจากระบบ
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-6 py-8 flex-1 w-full">
+
+    <!-- Hero Banner -->
+    <div class="relative bg-gradient-to-r from-[#e9e4d8] to-[#f2ede4] rounded-3xl p-8 md:p-12 mb-8 shadow-sm">
+      <div class="max-w-md">
+        <span class="inline-block bg-[#ded7c8] text-[#8a6e11] text-[10px] font-bold px-3 py-1 rounded-full tracking-wider mb-4">WELCOME TO PPPHONE</span>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight mb-3">
+          เลือกซื้อ <span class="italic text-[#8a6e11] font-serif font-bold">iPhone</span><br>และอุปกรณ์เสริม
+        </h1>
+        <p class="text-gray-500 text-xs mb-6 font-light leading-relaxed">
+          ค้นหาสมาร์ทโฟนระดับพรีเมียมและอุปกรณ์เสริมของแท้ พร้อมการรับประกันทุกการใช้งาน
+        </p>
+        <a href="#products-section" class="inline-block bg-[#a17d1a] hover:bg-[#896914] text-white text-xs font-semibold px-6 py-2.5 rounded-xl shadow-sm transition">
+          ช้อปเลย
+        </a>
+      </div>
+    </div>
+
+    <!-- Category Filter -->
+    <div id="products-section" class="flex flex-wrap items-center justify-between gap-4 mb-8">
+      <div class="flex gap-3">
+        <button onclick="filterCategory('All')" id="btnCategoryAll" class="px-8 py-2.5 rounded-full text-xs font-bold tracking-wider transition bg-[#a17d1a] text-white shadow-sm">
+          ทั้งหมด
+        </button>
+        <button onclick="filterCategory('iPhone')" id="btnCategoryiPhone" class="px-8 py-2.5 rounded-full text-xs font-bold tracking-wider transition bg-[#eae6dd] text-gray-500 hover:bg-[#dfd9cc]">
+          IPHONE
+        </button>
+        <button onclick="filterCategory('Accessory')" id="btnCategoryAccessory" class="px-8 py-2.5 rounded-full text-xs font-bold tracking-wider transition bg-[#eae6dd] text-gray-500 hover:bg-[#dfd9cc]">
+          ACCESSORY
+        </button>
+      </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <!-- ข้อมูลสินค้าจะแสดงตรงนี้ด้วย JavaScript -->
+    </div>
+
+  </main>
+
+  <!-- Modal 1: เพิ่มสินค้าใหม่ (สำหรับ Admin / Staff) -->
+  <div id="addModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl relative">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">เพิ่มสินค้าใหม่</h3>
+      
+      <form onsubmit="saveNewProduct(event)" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-bold text-gray-600 block mb-1">เลือกประเภทสินค้า</label>
+            <select id="addCategory" onchange="onCategoryChange()" class="w-full border rounded-lg p-2 text-xs font-bold text-[#8a6e11] outline-none focus:border-[#8a6e11]">
+              <option value="iPhone">iPhone (IP)</option>
+              <option value="Accessory">Accessory (AC)</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600 block mb-1">รหัสสินค้า (สุ่มสเปก)</label>
+            <div class="flex gap-2">
+              <input type="text" id="addCode" readonly required class="w-full border bg-gray-50 rounded-lg p-2 text-xs font-mono font-bold text-[#8a6e11] outline-none">
+              <button type="button" onclick="regenerateAddCode()" class="px-3 bg-gray-200 hover:bg-gray-300 text-xs font-bold rounded-lg transition" title="สุ่มรหัสใหม่">
+                <i class="fa-solid fa-arrows-rotate"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-gray-600 block mb-1">ชื่อสินค้า</label>
+          <input type="text" id="addName" required placeholder="เช่น iPhone 15 Pro Max" class="w-full border rounded-lg p-2 text-xs outline-none focus:border-[#8a6e11]">
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-gray-600 block mb-1">แท็กพิเศษ</label>
+          <select id="addTag" class="w-full border rounded-lg p-2 text-xs outline-none focus:border-[#8a6e11]">
+            <option value="">ไม่มี</option>
+            <option value="NEW">NEW</option>
+            <option value="BEST SELLER">BEST SELLER</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-gray-600 block mb-1">รายละเอียดสินค้า</label>
+          <textarea id="addDescription" rows="2" placeholder="รายละเอียดความจุ สเปก..." class="w-full border rounded-lg p-2 text-xs outline-none focus:border-[#8a6e11]"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-bold text-gray-600 block mb-1">ราคา (บาท)</label>
+            <input type="number" step="0.01" id="addPrice" required placeholder="0.00" class="w-full border rounded-lg p-2 text-xs outline-none focus:border-[#8a6e11]">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600 block mb-1">จำนวนสต็อก</label>
+            <input type="number" id="addStock" required placeholder="10" class="w-full border rounded-lg p-2 text-xs outline-none focus:border-[#8a6e11]">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-gray-600 block mb-1">URL รูปภาพสินค้า</label>
+          <input type="url" id="addImageUrl" placeholder="https://example.com/image.jpg" class="w-full border rounded-lg p-2 text-xs outline-none focus:border-[#8a6e11]">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3">
+          <button type="button" onclick="closeAddModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-300 transition">
+            ยกเลิก
+          </button>
+          <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition">
+            บันทึกสินค้าใหม่
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: แก้ไขข้อมูลสินค้า (สำหรับ Admin / Staff) -->
+  <div id="editModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl relative">
+      <h3 class="text-lg font-bold text-gray-800 mb-4">แก้ไขข้อมูลสินค้า</h3>
+      
+      <form id="editForm" onsubmit="saveProductEdit(event)" class="space-y-3">
+        <input type="hidden" id="editProductId">
+        
+        <div>
+          <label class="text-xs font-bold text-gray-600 block mb-1">รหัสสินค้า</label>
+          <input type="text" id="editCode" readonly class="w-full border bg-gray-100 rounded-lg p-2 text-xs font-mono font-bold text-gray-500 outline-none">
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-gray-600 block mb-1">ชื่อสินค้า</label>
+          <input type="text" id="editName" required class="w-full border rounded-lg p-2 text-xs outline-none focus:border-[#8a6e11]">
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-gray-600 block mb-1">รายละเอียดสินค้า</label>
+          <textarea id="editDescription" rows="2" class="w-full border rounded-lg p-2 text-xs outline-none focus:border-[#8a6e11]"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs font-bold text-gray-600 block mb-1">ราคา (บาท)</label>
+            <input type="number" step="0.01" id="editPrice" required class="w-full border rounded-lg p-2 text-xs outline-none focus:border-[#8a6e11]">
+          </div>
+          <div>
+            <label class="text-xs font-bold text-gray-600 block mb-1">จำนวนสต็อก</label>
+            <input type="number" id="editStock" required class="w-full border rounded-lg p-2 text-xs outline-none focus:border-[#8a6e11]">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-gray-600 block mb-1">URL รูปภาพสินค้า</label>
+          <input type="url" id="editImageUrl" placeholder="https://example.com/image.jpg" class="w-full border rounded-lg p-2 text-xs outline-none focus:border-[#8a6e11]">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3">
+          <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-300 transition">
+            ยกเลิก
+          </button>
+          <button type="submit" class="px-4 py-2 bg-[#8a6e11] text-white rounded-lg text-xs font-bold hover:bg-[#735c0f] transition">
+            บันทึกการแก้ไข
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    let currentCategory = 'All';
+    let allProducts = [];
+    let currentUser = {};
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      
+      applyRolePermissions();
+      await updateCartBadge();
+      await loadProducts();
+    });
+
+    function getUserId() {
+      if (!currentUser) return null;
+      return currentUser.id 
+          || currentUser.user_id 
+          || currentUser.userId 
+          || (currentUser.userData && currentUser.userData.id)
+          || (currentUser.user && currentUser.user.id) 
+          || null;
+    }
+
+    function generateRandomSKU(category = 'iPhone') {
+      const isiPhone = category.toLowerCase() === 'iphone' || category.toUpperCase() === 'IP';
+      const prefix = isiPhone ? 'IP' : 'AC';
+      const randomDigits = Math.floor(100000 + Math.random() * 900000);
+      return `${prefix}-${randomDigits}`;
+    }
+
+    function onCategoryChange() {
+      const cat = document.getElementById('addCategory').value;
+      document.getElementById('addCode').value = generateRandomSKU(cat);
+    }
+
+    function regenerateAddCode() {
+      const cat = document.getElementById('addCategory').value;
+      document.getElementById('addCode').value = generateRandomSKU(cat);
+    }
+
+    function applyRolePermissions() {
+      const linkManage = document.getElementById('linkManage');
+      const linkReport = document.getElementById('linkReport');
+      const cartBtn = document.getElementById('cartBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+      const role = currentUser.role;
+
+      if (currentUser.username || getUserId()) {
+        if (logoutBtn) logoutBtn.classList.remove('hidden');
+      }
+
+      if (role === 'admin') {
+        if (linkManage) linkManage.classList.remove('hidden');
+        if (linkReport) linkReport.classList.remove('hidden');
+        if (cartBtn) cartBtn.classList.add('hidden');
+      } else if (role === 'staff') {
+        if (linkManage) linkManage.classList.remove('hidden');
+        if (linkReport) linkReport.classList.add('hidden');
+        if (cartBtn) cartBtn.classList.add('hidden');
+      } else {
+        if (linkManage) linkManage.classList.add('hidden');
+        if (linkReport) linkReport.classList.add('hidden');
+        if (cartBtn) cartBtn.classList.remove('hidden');
+      }
+    }
+
+    async function loadProducts() {
+      try {
+        const client = DB.getClient ? DB.getClient() : null;
+        if (client) {
+          const { data, error } = await client.from('products').select('*');
+          if (!error && data && data.length > 0) {
+            allProducts = data;
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+      }
+
+      if (!allProducts || allProducts.length === 0) {
+        allProducts = [
+          { id: '1', code: 'IP-109283', name: 'iPhone 13 Pro Max', description: 'เครื่องศูนย์ ประกันศูนย์ 1 ปี ความจุ 256GB', price: 32990, stock: 7, category: 'iPhone', tag: 'BEST SELLER', image_url: 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=500&auto=format&fit=crop' },
+          { id: '2', code: 'AC-392019', name: 'AirPods 4', description: 'ระบบตัดเสียงรบกวนแบบแอ็คทีฟ ประกันศูนย์', price: 5990, stock: 15, category: 'Accessory', tag: '', image_url: 'https://images.unsplash.com/photo-1600294037681-c80b4cb5b434?w=500&auto=format&fit=crop' },
+          { id: '3', code: 'AC-772184', name: 'Apple Watch Ultra 3', description: 'GPS + Cellular ตัวเรือนไทเทเนียม 49 มม.', price: 31900, stock: 3, category: 'Accessory', tag: 'NEW', image_url: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&auto=format&fit=crop' },
+          { id: '4', code: 'IP-482012', name: 'iPhone 15', description: '128GB เครื่องศูนย์แท้', price: 29900, stock: 1, category: 'iPhone', tag: '', image_url: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=500&auto=format&fit=crop' }
+        ];
+      }
+
+      renderProducts();
+    }
+
+    function filterCategory(cat) {
+      currentCategory = cat;
+      const btns = {
+        'iPhone': document.getElementById('btnCategoryiPhone'),
+        'Accessory': document.getElementById('btnCategoryAccessory'),
+        'All': document.getElementById('btnCategoryAll')
+      };
+
+      Object.keys(btns).forEach(key => {
+        if (btns[key]) {
+          btns[key].className = key === cat 
+            ? 'px-8 py-2.5 rounded-full text-xs font-bold tracking-wider transition bg-[#a17d1a] text-white shadow-sm' 
+            : 'px-8 py-2.5 rounded-full text-xs font-bold tracking-wider transition bg-[#eae6dd] text-gray-500 hover:bg-[#dfd9cc]';
+        }
+      });
+
+      renderProducts();
+    }
+
+    function renderProducts() {
+      const grid = document.getElementById('productGrid');
+      grid.innerHTML = '';
+
+      const filtered = currentCategory === 'All' 
+        ? allProducts 
+        : allProducts.filter(p => p.category && p.category.toLowerCase() === currentCategory.toLowerCase());
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400 text-sm">ไม่พบสินค้าในหมวดหมู่นี้</div>`;
+        return;
+      }
+
+      const role = currentUser.role;
+      const isStaffOrAdmin = role === 'admin' || role === 'staff';
+
+      filtered.forEach(p => {
+        const isLowStock = p.stock <= 2;
+        const productCode = p.code || `IP-${p.id}`;
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between relative border border-gray-100';
+
+        card.innerHTML = `
+          <div>
+            <div class="flex justify-between items-start mb-2 h-6">
+              <div>
+                ${p.tag === 'BEST SELLER' ? `<span class="bg-[#7a5e10] text-white text-[8px] font-bold px-2 py-0.5 rounded tracking-wider uppercase">BEST SELLER</span>` : ''}
+                ${p.tag === 'NEW' ? `<span class="bg-red-600 text-white text-[8px] font-bold px-2 py-0.5 rounded tracking-wider uppercase">NEW</span>` : ''}
+              </div>
+              
+              <div class="flex items-center gap-2">
+                ${isStaffOrAdmin ? `
+                  <button onclick="openEditModal('${p.id}')" class="text-gray-400 hover:text-amber-600 text-xs p-1" title="แก้ไขสินค้า"><i class="fa-solid fa-pen"></i></button>
+                  <button onclick="deleteProduct('${p.id}')" class="text-gray-400 hover:text-red-500 text-xs p-1" title="ลบสินค้า"><i class="fa-solid fa-trash"></i></button>
+                ` : `
+                  <button onclick="toggleFavorite(this)" class="text-gray-300 hover:text-red-500 text-xs transition">
+                    <i class="fa-regular fa-heart"></i>
+                  </button>
+                `}
+              </div>
+            </div>
+
+            <div class="w-full h-36 bg-[#f7f6f2] rounded-xl mb-3 flex items-center justify-center overflow-hidden">
+              <img src="${p.image_url || 'https://via.placeholder.com/300x200'}" alt="${p.name}" class="object-contain h-full w-full p-2">
+            </div>
+
+            <div class="text-[10px] font-mono text-[#8a6e11] font-bold mb-0.5">รหัส: ${productCode}</div>
+            <h3 class="font-bold text-gray-900 text-sm mb-1 line-clamp-1">${p.name}</h3>
+            <p class="text-[11px] text-gray-400 line-clamp-2 mb-3 font-light h-8">${p.description || ''}</p>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-base font-extrabold text-gray-900">฿${Number(p.price).toLocaleString()}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded ${isLowStock ? 'bg-red-50 text-red-500 font-medium' : 'bg-gray-100 text-gray-500'}">
+                เหลือ ${p.stock} เครื่อง
+              </span>
+            </div>
+
+            ${!isStaffOrAdmin ? `
+              <button onclick="addToCart('${p.id}')" class="w-full bg-[#8a6e11] hover:bg-[#735b0d] text-white py-2 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition shadow-sm">
+                <i class="fa-solid fa-cart-shopping text-[10px]"></i>
+                เพิ่มลงตะกร้า
+              </button>
+            ` : ''}
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function openAddModal() {
+      const category = document.getElementById('addCategory').value || 'iPhone';
+      document.getElementById('addCode').value = generateRandomSKU(category);
+      document.getElementById('addName').value = '';
+      document.getElementById('addDescription').value = '';
+      document.getElementById('addPrice').value = '';
+      document.getElementById('addStock').value = '';
+      document.getElementById('addImageUrl').value = '';
+      document.getElementById('addModal').classList.remove('hidden');
+    }
+
+    function closeAddModal() {
+      document.getElementById('addModal').classList.add('hidden');
+    }
+
+    async function saveNewProduct(e) {
+      e.preventDefault();
+
+      const newProduct = {
+        code: document.getElementById('addCode').value,
+        name: document.getElementById('addName').value,
+        category: document.getElementById('addCategory').value,
+        tag: document.getElementById('addTag').value || null,
+        description: document.getElementById('addDescription').value,
+        price: parseFloat(document.getElementById('addPrice').value),
+        stock: parseInt(document.getElementById('addStock').value),
+        image_url: document.getElementById('addImageUrl').value || 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=500&auto=format&fit=crop'
+      };
+
+      try {
+        const client = DB.getClient ? DB.getClient() : null;
+        if (client) {
+          const { data, error } = await client.from('products').insert([newProduct]).select();
+          if (error) throw error;
+          if (data && data.length > 0) {
+            allProducts.unshift(data[0]);
+          }
+        } else {
+          newProduct.id = Date.now().toString();
+          allProducts.unshift(newProduct);
+        }
+
+        closeAddModal();
+        renderProducts();
+        alert('เพิ่มสินค้าใหม่เรียบร้อยแล้ว!');
+      } catch (err) {
+        alert('เกิดข้อผิดพลาดในการเพิ่มสินค้า: ' + err.message);
+      }
+    }
+
+    function openEditModal(productId) {
+      const product = allProducts.find(p => p.id == productId);
+      if (!product) return;
+
+      document.getElementById('editProductId').value = product.id;
+      document.getElementById('editCode').value = product.code || `IP-${product.id}`;
+      document.getElementById('editName').value = product.name;
+      document.getElementById('editDescription').value = product.description || '';
+      document.getElementById('editPrice').value = product.price;
+      document.getElementById('editStock').value = product.stock;
+      document.getElementById('editImageUrl').value = product.image_url || '';
+
+      document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.add('hidden');
+    }
+
+    async function saveProductEdit(e) {
+      e.preventDefault();
+      const id = document.getElementById('editProductId').value;
+      const updatedData = {
+        name: document.getElementById('editName').value,
+        description: document.getElementById('editDescription').value,
+        price: parseFloat(document.getElementById('editPrice').value),
+        stock: parseInt(document.getElementById('editStock').value),
+        image_url: document.getElementById('editImageUrl').value
+      };
+
+      try {
+        const client = DB.getClient ? DB.getClient() : null;
+        if (client) {
+          const { error } = await client.from('products').update(updatedData).eq('id', id);
+          if (error) throw error;
+        }
+
+        const index = allProducts.findIndex(p => p.id == id);
+        if (index !== -1) {
+          allProducts[index] = { ...allProducts[index], ...updatedData };
+        }
+
+        closeEditModal();
+        renderProducts();
+        alert('อัปเดตข้อมูลสินค้าเรียบร้อยแล้ว!');
+      } catch (err) {
+        alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' + err.message);
+      }
+    }
+
+    async function deleteProduct(productId) {
+      if (!confirm('คุณต้องการลบสินค้ารายการนี้ใช่หรือไม่?')) return;
+
+      try {
+        const client = DB.getClient ? DB.getClient() : null;
+        if (client) {
+          const { error } = await client.from('products').delete().eq('id', productId);
+          if (error) throw error;
+        }
+
+        allProducts = allProducts.filter(p => p.id != productId);
+        renderProducts();
+        alert('ลบสินค้าเรียบร้อยแล้ว!');
+      } catch (err) {
+        alert('เกิดข้อผิดพลาดในการลบสินค้า: ' + err.message);
+      }
+    }
+
+    async function addToCart(productId) {
+      const userId = getUserId();
+
+      if (!userId) {
+        alert('ไม่พบรหัสผู้ใช้งาน กรุณาล็อกอินใหม่อีกครั้ง');
+        window.location.href = 'login.html';
+        return;
+      }
+
+      try {
+        const client = DB.getClient ? DB.getClient() : null;
+        if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
+
+        const { data: existing, error: fetchError } = await client
+          .from('cart')
+          .select('id, quantity')
+          .eq('user_id', userId)
+          .eq('product_id', productId)
+          .maybeSingle();
+
+        if (fetchError) throw fetchError;
+
+        if (existing) {
+          const { error: updateError } = await client
+            .from('cart')
+            .update({ quantity: existing.quantity + 1 })
+            .eq('id', existing.id);
+
+          if (updateError) throw updateError;
+        } else {
+          const { error: insertError } = await client
+            .from('cart')
+            .insert({
+              user_id: userId,
+              product_id: productId,
+              quantity: 1
+            });
+
+          if (insertError) throw insertError;
+        }
+
+        alert('เพิ่มสินค้าลงในตะกร้าเรียบร้อยแล้ว!');
+        await updateCartBadge();
+
+      } catch (err) {
+        console.error('Add to cart error:', err);
+        alert('เกิดข้อผิดพลาดในการเพิ่มสินค้าลงตะกร้า: ' + err.message);
+      }
+    }
+
+    async function updateCartBadge() {
+      const userId = getUserId();
+      if (!userId) return;
+
+      try {
+        const client = DB.getClient ? DB.getClient() : null;
+        if (!client) return;
+
+        const { data, error } = await client
+          .from('cart')
+          .select('quantity')
+          .eq('user_id', userId);
+
+        if (error) throw error;
+
+        const totalCount = (data || []).reduce((sum, item) => sum + item.quantity, 0);
+        const cartBadge = document.getElementById('cartCount');
+        if (cartBadge) cartBadge.innerText = totalCount;
+      } catch (e) {
+        console.error('Update cart badge error:', e);
+      }
+    }
+
+    function toggleFavorite(btn) {
+      const icon = btn.querySelector('i');
+      if (icon.classList.contains('fa-regular')) {
+        icon.classList.remove('fa-regular');
+        icon.classList.add('fa-solid', 'text-red-500');
+      } else {
+        icon.classList.remove('fa-solid', 'text-red-500');
+        icon.classList.add('fa-regular');
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('userSession');
+      window.location.href = 'login.html';
+    }
+  </script>
+</body>
+</html>

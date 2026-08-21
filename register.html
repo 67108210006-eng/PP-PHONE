@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สมัครสมาชิก - PP PHONE</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="db.js"></script>
+
+  <style>
+    /* ป้องกันไอคอนดวงตาเริ่มต้นของเบราว์เซอร์โพล่ขึ้นมาซ้อน */
+    input::-ms-reveal,
+    input::-ms-clear {
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-[#f8f9fa] via-[#f5f2e8] to-[#eae2cd] min-h-screen flex flex-col font-sans">
+
+  <!-- Header Bar -->
+  <header class="bg-white/80 backdrop-blur-md border-b border-gray-100/60 px-8 py-4 flex items-center justify-between">
+    <a href="login.html" class="flex items-center gap-2.5">
+      <div class="w-7 h-7 rounded-full border border-[#b89322] flex items-center justify-center text-[10px] font-bold text-[#b89322]">PP</div>
+      <span class="text-base font-extrabold text-[#8a6e11] tracking-wider">PP PHONE</span>
+    </a>
+  </header>
+
+  <!-- Main Card Container -->
+  <main class="flex-1 flex items-center justify-center p-4 py-8">
+    <div class="bg-white rounded-3xl shadow-xl w-full max-w-lg p-8 md:p-10 border border-gray-100 relative">
+      
+      <!-- Brand Logo Badge -->
+      <div class="flex justify-center mb-4">
+        <div class="w-20 h-20 bg-white rounded-full shadow-md border border-gray-100 flex items-center justify-center p-2">
+          <div class="text-center">
+            <div class="text-xl font-black text-[#b89322] tracking-wider">PP</div>
+            <div class="text-[7px] font-bold text-[#b89322] tracking-widest border-t border-b border-[#b89322] py-0.5 uppercase">PP PHONE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Title & Subtitle -->
+      <div class="text-center mb-6">
+        <h1 class="text-2xl font-black text-gray-800 tracking-tight">Create Account</h1>
+        <p class="text-[11px] text-gray-400 mt-1">สมัครสมาชิก</p>
+      </div>
+
+      <!-- Registration Form -->
+      <form class="space-y-4" onsubmit="handleRegister(event)">
+        
+        <!-- Username -->
+        <div class="border-b border-gray-200 focus-within:border-[#8a6e11] py-1 transition">
+          <input type="text" id="username" required placeholder="ชื่อผู้ใช้ (Username)" class="w-full text-xs py-1 outline-none bg-transparent text-gray-700 placeholder-gray-400">
+        </div>
+
+        <!-- Full Name -->
+        <div class="border-b border-gray-200 focus-within:border-[#8a6e11] py-1 transition">
+          <input type="text" id="fullname" required placeholder="ชื่อ-นามสกุล" class="w-full text-xs py-1 outline-none bg-transparent text-gray-700 placeholder-gray-400">
+        </div>
+
+        <!-- Address -->
+        <div class="border-b border-gray-200 focus-within:border-[#8a6e11] py-1 transition">
+          <input type="text" id="address" required placeholder="ที่อยู่" class="w-full text-xs py-1 outline-none bg-transparent text-gray-700 placeholder-gray-400">
+        </div>
+
+        <!-- Phone & Email -->
+        <div class="grid grid-cols-2 gap-6">
+          <div class="border-b border-gray-200 focus-within:border-[#8a6e11] py-1 transition">
+            <input type="tel" id="phone" required placeholder="เบอร์โทร" class="w-full text-xs py-1 outline-none bg-transparent text-gray-700 placeholder-gray-400">
+          </div>
+          <div class="border-b border-gray-200 focus-within:border-[#8a6e11] py-1 transition">
+            <input type="email" id="email" required placeholder="อีเมล" class="w-full text-xs py-1 outline-none bg-transparent text-gray-700 placeholder-gray-400">
+          </div>
+        </div>
+
+        <!-- Password & Confirm Password -->
+        <div class="grid grid-cols-2 gap-6">
+          <div class="relative border-b border-gray-200 focus-within:border-[#8a6e11] py-1 transition">
+            <input type="password" id="password" required placeholder="รหัสผ่าน" class="w-full text-xs py-1 pr-6 outline-none bg-transparent text-gray-700 placeholder-gray-400">
+            <button type="button" onclick="togglePass('password', 'icon1')" class="absolute right-0 top-1 text-gray-400 hover:text-gray-600 text-xs focus:outline-none">
+              <i id="icon1" class="fa-solid fa-eye-slash"></i>
+            </button>
+          </div>
+          <div class="relative border-b border-gray-200 focus-within:border-[#8a6e11] py-1 transition">
+            <input type="password" id="confirmPassword" required placeholder="ยืนยันรหัสผ่าน" class="w-full text-xs py-1 pr-6 outline-none bg-transparent text-gray-700 placeholder-gray-400">
+            <button type="button" onclick="togglePass('confirmPassword', 'icon2')" class="absolute right-0 top-1 text-gray-400 hover:text-gray-600 text-xs focus:outline-none">
+              <i id="icon2" class="fa-solid fa-eye-slash"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Error Message Alert -->
+        <div id="errorAlert" class="hidden text-red-500 text-[11px] text-center p-2.5 rounded-lg bg-red-50 border border-red-100 mt-2"></div>
+
+        <!-- Action Links & Submit Button -->
+        <div class="flex items-center justify-between pt-4">
+          <a href="login.html" class="text-xs font-bold text-[#8a6e11] hover:underline">กลับไปหน้า Login</a>
+          <button type="submit" class="bg-gradient-to-r from-[#8a6e11] to-[#b89322] hover:from-[#735c0f] hover:to-[#8a6e11] text-white px-7 py-3 rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition flex items-center gap-2">
+            <span>สมัครสมาชิก</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </main>
+
+  <script>
+    // สคริปต์สลับการมองเห็นรหัสผ่าน
+    function togglePass(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      }
+    }
+
+    // ฟังก์ชันสร้างรหัสลูกค้า CUS-ตามด้วย 4 หลัก (ตัวเลขผสมตัวอักษร)
+    function generateCustomerId() {
+      const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      let randomStr = '';
+      for (let i = 0; i < 4; i++) {
+        randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return `CUS-${randomStr}`;
+    }
+
+    // ระบบสำรอง หากไม่มี db.js จะบันทึกลง LocalStorage ให้ทันที
+    if (typeof window.DB === 'undefined') {
+      window.DB = {
+        async register(userData) {
+          let users = JSON.parse(localStorage.getItem('users_db')) || [];
+          if (users.some(u => u.username === userData.username)) {
+            throw new Error('ชื่อผู้ใช้นี้ถูกใช้งานแล้ว');
+          }
+          users.push(userData);
+          localStorage.setItem('users_db', JSON.stringify(users));
+          return true;
+        }
+      };
+    }
+
+    // ฟังก์ชันจัดการการลงทะเบียน
+    async function handleRegister(e) {
+      e.preventDefault();
+      
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const errorAlert = document.getElementById('errorAlert');
+
+      errorAlert.classList.add('hidden');
+
+      if (password !== confirmPassword) {
+        errorAlert.innerText = 'รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน';
+        errorAlert.classList.remove('hidden');
+        return;
+      }
+
+      const nameParts = document.getElementById('fullname').value.trim().split(' ');
+      const newCustomerId = generateCustomerId(); // สุ่มรหัส CUS-XXXX
+
+      const userData = {
+        id: newCustomerId, // ส่งรหัส CUS-XXXX ไปบันทึก
+        username: username,
+        first_name: nameParts[0] || '',
+        last_name: nameParts.slice(1).join(' ') || '',
+        address: document.getElementById('address').value.trim(),
+        phone: document.getElementById('phone').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        password: password,
+        role: 'customer'
+      };
+
+      try {
+        await window.DB.register(userData);
+        alert(`สมัครสมาชิกสำเร็จ! รหัสลูกค้าของคุณคือ: ${newCustomerId}`);
+        window.location.href = 'login.html';
+      } catch (err) {
+        errorAlert.innerText = err.message || 'เกิดข้อผิดพลาดในการลงทะเบียน';
+        errorAlert.classList.remove('hidden');
+      }
+    }
+  </script>
+</body>
+</html>

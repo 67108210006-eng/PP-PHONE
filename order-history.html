@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ประวัติการสั่งซื้อ - PP PHONE</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="db.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
+    body { font-family: 'Prompt', sans-serif; }
+  </style>
+</head>
+<body class="bg-[#f7f6f2] min-h-screen text-gray-800 flex flex-col">
+
+  <!-- Navigation Bar -->
+  <nav class="bg-white border-b border-gray-100 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      
+      <!-- Logo -->
+      <a href="index.html" class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full border-2 border-[#a17d1a] flex flex-col items-center justify-center text-[#a17d1a]">
+          <span class="text-[11px] font-extrabold leading-none">PP</span>
+          <span class="text-[7px] font-bold tracking-tighter leading-none mt-0.5">PHONE</span>
+        </div>
+        <span class="text-xl font-extrabold text-[#a17d1a] tracking-wider">PP PHONE</span>
+      </a>
+
+      <!-- Menu Navigation -->
+      <div class="hidden md:flex items-center gap-8 text-xs font-semibold text-gray-500">
+        <a href="index.html" class="hover:text-[#8a6e11] transition">สินค้า</a>
+        <a href="order-history.html" class="text-[#8a6e11] border-b-2 border-[#8a6e11] pb-1">ประวัติการสั่งซื้อ</a>
+        <a href="manage-products.html" id="linkManage" class="hover:text-[#8a6e11] transition hidden">จัดการสินค้า</a>
+        <a href="sales-report.html" id="linkReport" class="hover:text-[#8a6e11] transition hidden">รายงานยอดขาย</a>
+      </div>
+
+      <!-- User Profile & Cart Icon -->
+      <div class="flex items-center gap-3">
+        <a href="cart.html" id="cartBtn" class="relative w-9 h-9 rounded-full bg-[#8a6e11] text-white flex items-center justify-center shadow-sm hover:opacity-90 transition">
+          <i class="fa-solid fa-cart-shopping text-xs"></i>
+          <span id="cartCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">0</span>
+        </a>
+        
+        <div class="flex items-center gap-2">
+          <a href="login.html" id="userBadge" class="w-9 h-9 rounded-full bg-[#8a6e11] text-white flex items-center justify-center shadow-sm hover:opacity-90 transition">
+            <i class="fa-solid fa-user text-xs"></i>
+          </a>
+          <button onclick="logout()" id="logoutBtn" class="hidden text-xs text-red-500 font-bold hover:underline ml-1">
+            ออกจากระบบ
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="max-w-6xl mx-auto px-6 py-8 flex-1 w-full">
+    <div class="mb-6">
+      <h1 class="text-3xl font-bold text-gray-900">ประวัติการสั่งซื้อ</h1>
+      <p class="text-xs text-gray-400 mt-1">ดูประวัติและสถานะการสั่งซื้อทั้งหมด</p>
+    </div>
+
+    <!-- Search Bar & Filters -->
+    <div class="bg-gray-100/70 p-3 rounded-2xl flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div class="flex items-center gap-2">
+        <button onclick="filterOrders()" class="bg-[#8a6e11] text-white px-5 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-[#735b0e] transition">
+          ทั้งหมด
+        </button>
+      </div>
+
+      <div class="flex items-center gap-3 flex-1 max-w-md">
+        <div class="relative w-full">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+          <input type="text" id="searchInput" onkeyup="filterOrders()" placeholder="ค้นหารหัสคำสั่งซื้อ หรือรหัสลูกค้า..." class="w-full pl-9 pr-4 py-2 bg-white rounded-xl text-xs border border-gray-200 focus:outline-none focus:border-[#8a6e11]">
+        </div>
+        <input type="date" id="dateInput" onchange="filterOrders()" class="bg-white border border-gray-200 text-xs text-gray-600 py-2 px-3 rounded-xl focus:outline-none">
+      </div>
+    </div>
+
+    <!-- Orders Container -->
+    <div id="orderList" class="space-y-4">
+      <div class="bg-white rounded-2xl p-8 text-center text-gray-400 font-light shadow-sm">
+        กำลังโหลดประวัติการสั่งซื้อ...
+      </div>
+    </div>
+  </main>
+
+  <script>
+    let currentUser = {};
+    let allOrders = [];
+    let isAdminOrStaff = false;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      } catch (e) {
+        currentUser = {};
+      }
+      
+      // ตรวจสอบ Role
+      const role = String(
+        currentUser.role || 
+        (currentUser.userData && currentUser.userData.role) || 
+        'customer'
+      ).toLowerCase();
+
+      isAdminOrStaff = ['admin', 'staff', 'employee'].includes(role);
+
+      // ปรับแต่งการแสดงผลเมนูตามสิทธิ์ (Role)
+      applyRolePermissions();
+
+      // ดึง User ID
+      const userId = getUserId();
+      
+      // ตรวจสอบการล็อกอิน
+      const isLoggedIn = currentUser && Object.keys(currentUser).length > 0;
+      if (!isLoggedIn || (!isAdminOrStaff && !userId)) {
+        alert('กรุณาล็อกอินเข้าสู่ระบบก่อน');
+        window.location.href = 'login.html';
+        return;
+      }
+
+      await loadOrderHistory();
+    });
+
+    function applyRolePermissions() {
+      const linkManage = document.getElementById('linkManage');
+      const linkReport = document.getElementById('linkReport');
+      const cartBtn = document.getElementById('cartBtn');
+      const logoutBtn = document.getElementById('logoutBtn');
+      
+      const role = String(
+        currentUser.role || 
+        (currentUser.userData && currentUser.userData.role) || 
+        'customer'
+      ).toLowerCase();
+
+      if (currentUser.username || getUserId()) {
+        if (logoutBtn) logoutBtn.classList.remove('hidden');
+      }
+
+      if (role === 'admin') {
+        if (linkManage) linkManage.classList.remove('hidden');
+        if (linkReport) linkReport.classList.remove('hidden');
+        if (cartBtn) cartBtn.classList.add('hidden');
+      } else if (['staff', 'employee'].includes(role)) {
+        if (linkManage) linkManage.classList.remove('hidden');
+        if (linkReport) linkReport.classList.add('hidden');
+        if (cartBtn) cartBtn.classList.add('hidden');
+      } else {
+        // สำหรับลูกค้า (Customer)
+        if (linkManage) linkManage.classList.add('hidden');
+        if (linkReport) linkReport.classList.add('hidden');
+        if (cartBtn) cartBtn.classList.remove('hidden');
+      }
+    }
+
+    function getUserId() {
+      if (!currentUser) return null;
+      return currentUser.id 
+          || currentUser.user_id 
+          || currentUser.userId 
+          || (currentUser.userData && currentUser.userData.id)
+          || (currentUser.userData && currentUser.userData.username)
+          || (currentUser.user && currentUser.user.id) 
+          || currentUser.username
+          || currentUser.email
+          || null;
+    }
+
+    async function loadOrderHistory() {
+      const container = document.getElementById('orderList');
+      const userId = getUserId();
+
+      try {
+        const client = DB.getClient ? DB.getClient() : null;
+        if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
+
+        let query = client
+          .from('orders')
+          .select(`
+            id,
+            user_id,
+            total_amount,
+            status,
+            created_at,
+            order_items (
+              id,
+              quantity,
+              price,
+              products (
+                id,
+                name,
+                code,
+                image_url
+              )
+            )
+          `)
+          .order('created_at', { ascending: false });
+
+        if (!isAdminOrStaff) {
+          query = query.eq('user_id', userId);
+        }
+
+        const { data: orders, error } = await query;
+        if (error) throw error;
+
+        allOrders = orders || [];
+        renderOrders(allOrders);
+
+      } catch (err) {
+        console.error('Error loading orders:', err);
+        container.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-red-500 text-xs">เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err.message}</div>`;
+      }
+    }
+
+    function renderOrders(orders) {
+      const container = document.getElementById('orderList');
+      container.innerHTML = '';
+
+      if (!orders || orders.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white rounded-2xl p-12 text-center text-gray-400 font-light shadow-sm">
+            <i class="fa-solid fa-receipt text-4xl mb-3 text-gray-300"></i>
+            <p>ไม่พบรายการสั่งซื้อ</p>
+          </div>`;
+        return;
+      }
+
+      orders.forEach(order => {
+        const orderDate = new Date(order.created_at).toLocaleString('th-TH', {
+          day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+
+        const orderCard = document.createElement('div');
+        orderCard.className = 'bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden';
+
+        let itemsHtml = '';
+        (order.order_items || []).forEach(item => {
+          const product = item.products || {};
+          itemsHtml += `
+            <div class="flex items-center gap-4 p-4 bg-[#fbfbf9] rounded-xl my-2">
+              <div class="w-16 h-16 bg-white rounded-lg p-1 shrink-0 flex items-center justify-center border border-gray-100">
+                <img src="${product.image_url || 'https://via.placeholder.com/100'}" class="object-contain h-full w-full">
+              </div>
+              <div class="flex-1">
+                <h4 class="font-bold text-gray-900 text-sm">${product.name || 'สินค้า'}</h4>
+                <p class="text-[11px] text-gray-400 mt-0.5">SKU: ${product.code || product.id}</p>
+                <p class="text-[11px] text-gray-500 mt-1">จำนวน: ${item.quantity}</p>
+              </div>
+              <div class="text-right">
+                <span class="text-sm font-extrabold text-[#8a6e11]">฿${Number(item.price * item.quantity).toLocaleString()}</span>
+              </div>
+            </div>
+          `;
+        });
+
+        orderCard.innerHTML = `
+          <div class="p-5 flex flex-wrap items-center justify-between gap-4 border-b border-gray-50">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-6 flex-1">
+              <div>
+                <span class="text-[10px] text-gray-400 block font-medium">รหัสคำสั่งซื้อ</span>
+                <span class="text-xs font-bold text-gray-900">ORD-${order.id}</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-gray-400 block font-medium">วันที่</span>
+                <span class="text-xs font-semibold text-gray-700">${orderDate}</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-gray-400 block font-medium">รหัสลูกค้า</span>
+                <span class="text-xs font-bold text-[#8a6e11]">${order.user_id || 'N/A'}</span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+              <div class="text-right">
+                <span class="text-[10px] text-gray-400 block font-medium">ยอดรวม</span>
+                <span class="text-base font-extrabold text-[#a17d1a]">฿${Number(order.total_amount || 0).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 bg-gray-50/40">
+            <h5 class="text-xs font-bold text-gray-700 mb-2">รายการสินค้า</h5>
+            ${itemsHtml}
+          </div>
+        `;
+
+        container.appendChild(orderCard);
+      });
+    }
+
+    function filterOrders() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const selectedDate = document.getElementById('dateInput').value;
+
+      const filtered = allOrders.filter(order => {
+        const matchesSearch = 
+          String(order.id).toLowerCase().includes(search) ||
+          String(order.user_id).toLowerCase().includes(search);
+
+        let matchesDate = true;
+        if (selectedDate) {
+          const orderDateStr = new Date(order.created_at).toISOString().split('T')[0];
+          matchesDate = (orderDateStr === selectedDate);
+        }
+
+        return matchesSearch && matchesDate;
+      });
+
+      renderOrders(filtered);
+    }
+
+    function logout() {
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('userSession');
+      window.location.href = 'login.html';
+    }
+  </script>
+</body>
+</html>
