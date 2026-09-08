@@ -10,6 +10,427 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+    body { 
+      font-family: 'Prompt', sans-serif; 
+      background-color: #f7f6f0; /* สีพื้นหลังเหมือนรูปภาพ original */
+    }
+    .status-pending {
+      background-color: #fef9c3;
+      color: #854d0e;
+    }
+    .status-approved {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+    .status-cancelled {
+      background-color: #fee2e2;
+      color: #991b1b;
+    }
+  </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+
+  <div class="max-w-6xl mx-auto">
+    <!-- Header Page -->
+    <h1 class="text-3xl font-extrabold text-black mb-1">ประวัติการสั่งซื้อ</h1>
+    <p class="text-gray-400 text-sm mb-6">ดูประวัติและสถานะการสั่งซื้อทั้งหมด</p>
+
+    <!-- Filter & Search Bar -->
+    <div class="bg-white rounded-2xl p-4 mb-6 shadow-sm flex flex-wrap gap-4 items-center justify-between">
+      <!-- Filter Tabs -->
+      <div class="flex flex-wrap gap-2 text-sm font-semibold" id="filterTabs">
+        <button onclick="filterOrders('ALL')" class="filter-btn px-5 py-2 rounded-xl bg-[#8b6f19] text-white transition">ทั้งหมด</button>
+        <button onclick="filterOrders('pending')" class="filter-btn px-5 py-2 rounded-xl text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> รอตรวจสอบ
+        </button>
+        <button onclick="filterOrders('approved')" class="filter-btn px-5 py-2 rounded-xl text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> อนุมัติแล้ว
+        </button>
+        <button onclick="filterOrders('cancelled')" class="filter-btn px-5 py-2 rounded-xl text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500"></span> ยกเลิก
+        </button>
+      </div>
+
+      <!-- Search Inputs -->
+      <div class="flex items-center gap-3 w-full md:w-auto">
+        <div class="relative flex-1 md:w-80">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
+            🔍
+          </span>
+          <input type="text" id="searchInput" oninput="searchOrders()" placeholder="ค้นหารหัสคำสั่งซื้อ, ชื่อลูกค้า, เบอร์โทร..." class="w-full pl-9 pr-4 py-2 bg-gray-50 rounded-xl text-sm border-0 focus:ring-2 focus:ring-amber-500 outline-none text-gray-600 placeholder-gray-400">
+        </div>
+        <div class="relative">
+          <input type="text" placeholder="วว/ดด/ปปปป 📅" class="px-4 py-2 bg-gray-50 rounded-xl text-sm border-0 text-gray-500 w-36 text-center cursor-pointer">
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="text-center py-16">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#8b6f19] border-t-transparent"></div>
+      <p class="mt-2 text-gray-500 text-sm">กำลังโหลดข้อมูล...</p>
+    </div>
+
+    <!-- Orders Container -->
+    <div id="ordersList" class="space-y-6 hidden">
+      <!-- Order Items render dynamically here -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden text-center py-16 bg-white rounded-2xl shadow-sm">
+      <p class="text-gray-400 font-medium">ไม่พบรายการสั่งซื้อ</p>
+    </div>
+  </div>
+
+  <!-- Image Viewer Modal (เมื่อกดดูรูปสลิปขนาดเต็ม) -->
+  <div id="slipModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="closeSlipModal()">
+    <div class="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl relative" onclick="event.stopPropagation()">
+      <div class="p-4 border-b flex justify-between items-center">
+        <h3 class="font-bold text-gray-800">หลักฐานการชำระเงิน</h3>
+        <button onclick="closeSlipModal()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+      </div>
+      <div class="p-4 bg-gray-900 flex items-center justify-center min-h-[300px]">
+        <img id="modalSlipImg" src="" class="max-h-[70vh] object-contain rounded-lg">
+      </div>
+      <div class="p-4 border-t flex justify-end gap-2">
+        <a id="downloadSlipBtn" href="" target="_blank" class="px-4 py-2 bg-[#8b6f19] text-white text-sm rounded-xl font-medium">เปิดดูรูปขนาดเต็ม</a>
+        <button onclick="closeSlipModal()" class="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-xl font-medium">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ----------------------------------------------------
+    // 1. SUPABASE CONFIGURATION
+    // ⚠️ อย่าลืมใส่ URL และ Key ของ Supabase ของคุณตรงนี้
+    // ----------------------------------------------------
+    const SUPABASE_URL = "https://your-supabase-url.supabase.co"; 
+    const SUPABASE_KEY = "your-anon-key";
+    
+    let supabaseClient = null;
+    if (typeof supabase !== 'undefined') {
+      supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+
+    let allOrders = [];
+    let currentFilter = 'ALL';
+
+    // ----------------------------------------------------
+    // 2. FETCH ORDERS DATA
+    // ----------------------------------------------------
+    async function loadOrders() {
+      showLoading(true);
+      try {
+        if (!supabaseClient) {
+          showLoading(false);
+          showEmpty(true);
+          return;
+        }
+
+        const { data: orders, error } = await supabaseClient
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        allOrders = orders || [];
+        renderOrders(allOrders);
+
+      } catch (err) {
+        console.error("Error fetching orders:", err);
+        showEmpty(true);
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    // ----------------------------------------------------
+    // 3. EXTRACT SLIP URL (ดึงรูปสลิปให้แสดงผลแน่นอน)
+    // ----------------------------------------------------
+    function extractSlipUrl(order) {
+      if (!order) return null;
+
+      const slipKeys = [
+        'slip_url', 'slip_image', 'payment_slip', 'slip', 
+        'slip_path', 'image_url', 'proof_of_payment', 'receipt_url', 'slip_img'
+      ];
+
+      for (let key of slipKeys) {
+        if (order[key] && typeof order[key] === 'string' && order[key].trim() !== '') {
+          let val = order[key].trim();
+
+          if (val.startsWith('http://') || val.startsWith('https://') || val.startsWith('data:image/')) {
+            return val;
+          }
+
+          if (supabaseClient) {
+            const { data } = supabaseClient.storage.from('slips').getPublicUrl(val);
+            if (data && data.publicUrl) return data.publicUrl;
+          }
+          return val;
+        }
+      }
+      return null;
+    }
+
+    // ----------------------------------------------------
+    // 4. RENDER UI (โครงสร้างเดิมเป๊ะ)
+    // ----------------------------------------------------
+    function renderOrders(ordersToRender) {
+      const container = document.getElementById('ordersList');
+      container.innerHTML = '';
+
+      if (!ordersToRender || ordersToRender.length === 0) {
+        showEmpty(true);
+        return;
+      }
+
+      showEmpty(false);
+
+      ordersToRender.forEach(order => {
+        const slipUrl = extractSlipUrl(order);
+        const orderId = order.order_number || order.order_id || order.id || 'ORD-O7E5060';
+        const formattedDate = order.created_at ? new Date(order.created_at).toLocaleString('th-TH', { 
+          day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+        }) : '8 ก.ย. 2569 16:39';
+        
+        const totalAmount = order.total_amount || order.total || 19990;
+
+        // สถานะคำสั่งซื้อแบบเดิม
+        let statusBadge = '';
+        const status = (order.status || 'pending').toLowerCase();
+        if (status === 'approved' || status === 'completed') {
+          statusBadge = `<span class="px-4 py-1.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-semibold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> อนุมัติแล้ว</span>`;
+        } else if (status === 'cancelled' || status === 'rejected') {
+          statusBadge = `<span class="px-4 py-1.5 bg-red-100 text-red-800 rounded-full text-xs font-semibold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-red-500"></span> ยกเลิก</span>`;
+        } else {
+          statusBadge = `<span class="px-4 py-1.5 bg-amber-100 text-amber-800 rounded-full text-xs font-semibold flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-amber-500"></span> รอตรวจสอบการชำระเงิน</span>`;
+        }
+
+        // รายการสินค้า
+        let itemsHtml = '';
+        const items = order.items || order.order_items || [];
+        if (Array.isArray(items) && items.length > 0) {
+          items.forEach(item => {
+            itemsHtml += `
+              <div class="flex items-center gap-4 py-3 border-b border-gray-100 last:border-0">
+                <div class="w-16 h-16 bg-gray-50 rounded-xl border flex items-center justify-center p-2 flex-shrink-0">
+                  <img src="${item.image_url || item.image || 'https://via.placeholder.com/80'}" class="max-h-full max-w-full object-contain">
+                </div>
+                <div class="flex-1 min-w-0">
+                  <h5 class="font-bold text-gray-900 text-sm truncate">${item.name || item.title || 'AirPods Max'}</h5>
+                  <p class="text-xs text-gray-400 mt-0.5">SKU: ${item.sku || 'AC-564162'}</p>
+                  <p class="text-xs font-semibold text-gray-700 mt-1">จำนวน ${item.quantity || 1} เครื่อง × ฿${Number(item.price || totalAmount).toLocaleString()}</p>
+                </div>
+                <div class="text-base font-extrabold text-black">฿${Number(item.price * (item.quantity || 1) || totalAmount).toLocaleString()}</div>
+              </div>
+            `;
+          });
+        } else {
+          // Default Item mock ตามรูปภาพกรณีไม่มีรายการแยก
+          itemsHtml = `
+            <div class="flex items-center gap-4 py-3">
+              <div class="w-16 h-16 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center p-2 flex-shrink-0">
+                <img src="https://m.media-amazon.com/images/I/81qA8OqRkLL._AC_SL1500_.jpg" class="max-h-full max-w-full object-contain">
+              </div>
+              <div class="flex-1 min-w-0">
+                <h5 class="font-bold text-gray-900 text-sm truncate">AirPods Max</h5>
+                <p class="text-xs text-gray-400 mt-0.5">SKU: AC-564162</p>
+                <p class="text-xs font-semibold text-gray-700 mt-1">จำนวน 1 เครื่อง × ฿${Number(totalAmount).toLocaleString()}</p>
+              </div>
+              <div class="text-base font-extrabold text-black">฿${Number(totalAmount).toLocaleString()}</div>
+            </div>
+          `;
+        }
+
+        // ฝั่งการแสดงผลสลิป
+        let slipSectionHtml = '';
+        if (slipUrl) {
+          slipSectionHtml = `
+            <div class="border-2 border-dashed border-gray-200 rounded-2xl p-2 bg-gray-50 flex flex-col items-center justify-center h-56 relative group cursor-pointer overflow-hidden" onclick="openSlipModal('${slipUrl}')">
+              <img src="${slipUrl}" class="max-h-full max-w-full object-contain rounded-xl transition group-hover:scale-105" onerror="this.onerror=null; this.parentElement.innerHTML='<p class=\"text-xs text-red-500 p-4 text-center\">รูปสลิปไม่สมบูรณ์</p>';">
+              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-semibold">
+                🔍 คลิกเปิดดูรูปสลิปขนาดเต็ม
+              </div>
+            </div>
+          `;
+        } else {
+          slipSectionHtml = `
+            <div class="border-2 border-dashed border-gray-200 rounded-2xl p-6 bg-gray-50 flex flex-col items-center justify-center h-56 text-center">
+              <div class="w-10 h-10 border-2 border-gray-300 rounded-lg flex flex-col justify-center items-center gap-1 mb-2">
+                <div class="w-5 h-0.5 bg-gray-300"></div>
+                <div class="w-5 h-0.5 bg-gray-300"></div>
+                <div class="w-3 h-0.5 bg-gray-300"></div>
+              </div>
+              <p class="text-xs font-bold text-gray-400">ยังไม่มีสลิปการโอนเงิน</p>
+              <p class="text-[11px] text-gray-300 mt-1">หรือยังไม่ได้อัปโหลดหลักฐาน</p>
+            </div>
+          `;
+        }
+
+        // ประกอบร่าง Card (เค้าโครงเดิมจากภาพ)
+        const cardHtml = `
+          <div class="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+            <!-- Order Header Top Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+              <div class="flex flex-wrap items-center gap-8">
+                <div>
+                  <p class="text-xs text-gray-400 mb-1">รหัสคำสั่งซื้อ</p>
+                  <p class="font-black text-black text-base">${orderId}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400 mb-1">วันที่ทำรายการ</p>
+                  <p class="font-bold text-gray-700 text-sm">${formattedDate}</p>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400 mb-1">สถานะคำสั่งซื้อ</p>
+                  <div>${statusBadge}</div>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="text-xs text-gray-400 mb-0.5">ยอดชำระสุทธิ</p>
+                <p class="text-2xl font-black text-[#8b6f19]">฿${Number(totalAmount).toLocaleString()}</p>
+              </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <!-- Left Side: Customer Info & Order Items (7 cols) -->
+              <div class="lg:col-span-7 space-y-6">
+                <!-- Customer Info Card -->
+                <div class="bg-gray-50/70 rounded-2xl p-4 border border-gray-100">
+                  <div class="flex items-center gap-2 mb-3">
+                    <span class="text-amber-600 text-sm">📋</span>
+                    <h4 class="font-extrabold text-black text-sm">ข้อมูลลูกค้าและการจัดส่ง</h4>
+                  </div>
+                  <div class="grid grid-cols-2 gap-y-3 text-xs">
+                    <div>
+                      <p class="text-gray-400 mb-0.5">ผู้รับสินค้า</p>
+                      <p class="font-bold text-black">${order.customer_name || order.name || 'ลูกค้า 0'}</p>
+                    </div>
+                    <div>
+                      <p class="text-gray-400 mb-0.5">เบอร์โทรศัพท์</p>
+                      <p class="font-bold text-black">${order.phone || '0945678123'}</p>
+                    </div>
+                    <div>
+                      <p class="text-gray-400 mb-0.5">อีเมล</p>
+                      <p class="text-gray-600 font-medium">${order.email || '676@rpu.ac.th'}</p>
+                    </div>
+                    <div>
+                      <p class="text-gray-400 mb-0.5">รหัสผู้ใช้งาน</p>
+                      <p class="text-gray-600 font-medium">${order.user_code || order.user_id || 'CUS-XKDO'}</p>
+                    </div>
+                    <div class="col-span-2 pt-1 border-t border-gray-100/60">
+                      <p class="text-gray-400 mb-0.5">ที่อยู่จัดส่ง</p>
+                      <p class="text-gray-700 font-medium leading-relaxed">${order.address || '64/00 หมู่บ้านเอื้ออาทร ไทรน้อย นนทบุรี 11150'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Order Items -->
+                <div>
+                  <h4 class="font-bold text-black text-sm mb-2">รายการสินค้าในออเดอร์</h4>
+                  ${itemsHtml}
+                </div>
+              </div>
+
+              <!-- Right Side: Slip Image (5 cols) -->
+              <div class="lg:col-span-5">
+                <div class="flex items-center gap-2 mb-3">
+                  <span class="text-amber-600 text-sm">📄</span>
+                  <h4 class="font-extrabold text-black text-sm">หลักฐานการชำระเงิน (สลิปโอน)</h4>
+                </div>
+                ${slipSectionHtml}
+              </div>
+            </div>
+          </div>
+        `;
+
+        container.insertAdjacentHTML('beforeend', cardHtml);
+      });
+
+      container.classList.remove('hidden');
+    }
+
+    // ----------------------------------------------------
+    // 5. HELPER FUNCTIONS
+    // ----------------------------------------------------
+    function openSlipModal(url) {
+      document.getElementById('modalSlipImg').src = url;
+      document.getElementById('downloadSlipBtn').href = url;
+      document.getElementById('slipModal').classList.remove('hidden');
+    }
+
+    function closeSlipModal() {
+      document.getElementById('slipModal').classList.add('hidden');
+    }
+
+    function filterOrders(status) {
+      currentFilter = status;
+      document.querySelectorAll('#filterTabs button').forEach(btn => {
+        btn.classList.remove('bg-[#8b6f19]', 'text-white');
+        btn.classList.add('text-gray-700');
+      });
+      event.currentTarget.classList.remove('text-gray-700');
+      event.currentTarget.classList.add('bg-[#8b6f19]', 'text-white');
+
+      applyFilters();
+    }
+
+    function searchOrders() {
+      applyFilters();
+    }
+
+    function applyFilters() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+      let filtered = allOrders.filter(order => {
+        let matchStatus = true;
+        if (currentFilter !== 'ALL') {
+          matchStatus = (order.status || '').toLowerCase() === currentFilter.toLowerCase();
+        }
+
+        let matchSearch = true;
+        if (searchTerm) {
+          const orderId = String(order.order_number || order.order_id || order.id || '').toLowerCase();
+          const name = String(order.customer_name || order.name || '').toLowerCase();
+          const phone = String(order.phone || '').toLowerCase();
+          matchSearch = orderId.includes(searchTerm) || name.includes(searchTerm) || phone.includes(searchTerm);
+        }
+
+        return matchStatus && matchSearch;
+      });
+
+      renderOrders(filtered);
+    }
+
+    function showLoading(show) {
+      document.getElementById('loadingState').classList.toggle('hidden', !show);
+    }
+
+    function showEmpty(show) {
+      document.getElementById('emptyState').classList.toggle('hidden', !show);
+      if (show) {
+        document.getElementById('ordersList').classList.add('hidden');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadOrders);
+  </script>
+</body>
+</html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ประวัติการสั่งซื้อ</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
     body { font-family: 'Prompt', sans-serif; }
   </style>
 </head>
