@@ -11,7 +11,7 @@
   <script src="db.js"></script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
     body { font-family: 'Prompt', sans-serif; }
   </style>
 </head>
@@ -21,173 +21,109 @@
   <nav class="bg-white border-b border-gray-100 sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
       
-      <!-- Logo -->
+      <!-- โลโก้ PP PHONE -->
       <a href="index.html" class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full border-2 border-[#a17d1a] flex flex-col items-center justify-center text-[#a17d1a]">
+        <div class="w-10 h-10 rounded-full border-2 border-[#8a6e11] flex flex-col items-center justify-center text-[#8a6e11]">
           <span class="text-[11px] font-extrabold leading-none">PP</span>
           <span class="text-[7px] font-bold tracking-tighter leading-none mt-0.5">PHONE</span>
         </div>
-        <span class="text-xl font-extrabold text-[#a17d1a] tracking-wider">PP PHONE</span>
+        <span class="text-xl font-extrabold text-[#8a6e11] tracking-wider">PP PHONE</span>
       </a>
 
-      <!-- Menu Navigation -->
-      <div class="hidden md:flex items-center gap-8 text-xs font-semibold text-gray-500">
-        <a href="index.html" class="hover:text-[#8a6e11] transition">สินค้า</a>
-        <a href="order-history.html" class="text-[#8a6e11] border-b-2 border-[#8a6e11] pb-1">ประวัติการสั่งซื้อ</a>
-        <a href="manage-products.html" id="linkManage" class="hover:text-[#8a6e11] transition hidden">จัดการสินค้า</a>
-        <a href="sales-report.html" id="linkReport" class="hover:text-[#8a6e11] transition hidden">รายงานยอดขาย</a>
+      <!-- เมนูตรงกลาง -->
+      <div class="flex items-center gap-8 text-sm font-semibold text-gray-600">
+        <a href="index.html#products" class="hover:text-[#8a6e11] transition py-1">สินค้า</a>
+        <a href="order-history.html" class="text-[#8a6e11] font-bold py-1">ประวัติการสั่งซื้อ</a>
+        <a href="manage-products.html" id="navProducts" class="hover:text-[#8a6e11] transition py-1 hidden">จัดการสินค้า</a>
+        <a href="sales-report.html" id="navSales" class="hover:text-[#8a6e11] transition py-1 hidden">รายงานยอดขาย</a>
       </div>
 
-      <!-- User Profile & Cart Icon -->
-      <div class="flex items-center gap-3">
-        <a href="cart.html" id="cartBtn" class="relative w-9 h-9 rounded-full bg-[#8a6e11] text-white flex items-center justify-center shadow-sm hover:opacity-90 transition">
-          <i class="fa-solid fa-cart-shopping text-xs"></i>
-          <span id="cartCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">0</span>
+      <!-- ไอคอนขวามือ -->
+      <div class="flex items-center gap-4">
+        <a href="cart.html" class="relative w-10 h-10 rounded-full bg-[#8a6e11] text-white flex items-center justify-center transition hover:opacity-90">
+          <i class="fa-solid fa-cart-shopping text-sm"></i>
+          <span id="navCartBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">0</span>
         </a>
-        
-        <div class="flex items-center gap-2">
-          <a href="login.html" id="userBadge" class="w-9 h-9 rounded-full bg-[#8a6e11] text-white flex items-center justify-center shadow-sm hover:opacity-90 transition">
-            <i class="fa-solid fa-user text-xs"></i>
-          </a>
-          <button onclick="logout()" id="logoutBtn" class="hidden text-xs text-red-500 font-bold hover:underline ml-1">
-            ออกจากระบบ
-          </button>
+
+        <div class="w-10 h-10 rounded-full bg-[#8a6e11] text-white flex items-center justify-center text-base font-bold">
+          <i class="fa-solid fa-user"></i>
         </div>
+
+        <button onclick="logout()" class="text-xs font-bold text-red-500 hover:text-red-600 transition ml-1">
+          ออกจากระบบ
+        </button>
       </div>
+
     </div>
   </nav>
 
   <!-- Main Content -->
-  <main class="max-w-6xl mx-auto px-6 py-8 flex-1 w-full">
-    <div class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-900">ประวัติการสั่งซื้อ</h1>
-      <p class="text-xs text-gray-400 mt-1">ดูประวัติและสถานะการสั่งซื้อทั้งหมด</p>
+  <main class="max-w-5xl mx-auto px-6 py-8 flex-1 w-full">
+    <div class="mb-6 flex justify-between items-end">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">ประวัติการสั่งซื้อ</h1>
+        <p class="text-xs text-gray-500 mt-1">รายการคำสั่งซื้อทั้งหมดของคุณและการตรวจสอบสลิป</p>
+      </div>
+      <button onclick="loadOrderHistory()" class="text-xs bg-white border border-gray-200 shadow-sm hover:bg-gray-50 text-gray-700 font-bold px-3 py-2 rounded-xl transition flex items-center gap-1">
+        <i class="fa-solid fa-rotate-right text-[#8a6e11]"></i> รีเฟรชข้อมูล
+      </button>
     </div>
 
-    <!-- Filter Bar & Search Container -->
-    <div class="bg-white/80 backdrop-blur-sm p-3 rounded-2xl border border-gray-100 flex flex-wrap items-center justify-between gap-4 mb-6 shadow-sm">
-      
-      <!-- Status Tabs -->
-      <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-        <button onclick="setStatusFilter('all')" id="btnFilterAll" class="px-4 py-1.5 rounded-xl text-xs font-bold transition bg-[#8a6e11] text-white shadow-sm">
-          ทั้งหมด
-        </button>
-        <button onclick="setStatusFilter('pending')" id="btnFilterPending" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-amber-500"></span> รอตรวจสอบ
-        </button>
-        <button onclick="setStatusFilter('approved')" id="btnFilterApproved" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span> อนุมัติแล้ว
-        </button>
-        <button onclick="setStatusFilter('cancelled')" id="btnFilterCancelled" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-red-500"></span> ยกเลิก
-        </button>
-      </div>
-
-      <!-- Search & Date Filter -->
-      <div class="flex items-center gap-3 flex-1 max-w-md w-full">
-        <div class="relative flex-1">
-          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-          <input type="text" id="searchInput" onkeyup="filterOrders()" placeholder="ค้นหารหัสคำสั่งซื้อ, ชื่อลูกค้า, เบอร์โทร..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-[#8a6e11] transition">
-        </div>
-        <div class="relative">
-          <input type="date" id="dateInput" onchange="filterOrders()" class="bg-gray-50 border border-gray-200 text-xs text-gray-600 py-2 px-3 rounded-xl focus:bg-white focus:outline-none focus:border-[#8a6e11] transition">
-        </div>
-      </div>
-    </div>
-
-    <!-- Orders List Container -->
-    <div id="orderList" class="space-y-6">
+    <!-- รายการคำสั่งซื้อ -->
+    <div id="ordersContainer" class="space-y-4">
       <div class="bg-white rounded-2xl p-12 text-center text-gray-400 font-light shadow-sm">
-        กำลังโหลดประวัติการสั่งซื้อ...
+        <i class="fa-solid fa-spinner fa-spin text-2xl mb-2 text-[#8a6e11]"></i>
+        <p class="text-xs">กำลังโหลดประวัติการสั่งซื้อ...</p>
       </div>
     </div>
   </main>
 
-  <!-- Image Preview Modal -->
-  <div id="imageModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4 cursor-pointer" onclick="closeImageModal()">
-    <div class="relative max-w-2xl w-full bg-white rounded-2xl p-3 shadow-2xl overflow-hidden flex flex-col items-center" onclick="event.stopPropagation()">
-      <button onclick="closeImageModal()" class="absolute top-3 right-3 bg-gray-900/60 hover:bg-gray-900 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold z-10 transition">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-      <div class="w-full bg-gray-900 rounded-xl p-2 flex items-center justify-center min-h-[300px]">
-        <img id="modalImg" src="" class="max-h-[75vh] w-auto object-contain rounded-lg">
-      </div>
-      <div class="mt-3 flex gap-2 w-full justify-end">
-        <a id="modalDownloadBtn" href="#" target="_blank" class="px-4 py-2 bg-[#8a6e11] hover:bg-[#725a0e] text-white text-xs rounded-xl font-bold transition flex items-center gap-1.5">
-          <i class="fa-solid fa-up-right-from-square text-[10px]"></i> เปิดดูภาพขนาดเต็ม
-        </a>
-        <button onclick="closeImageModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded-xl font-bold transition">
-          ปิด
+  <!-- Modal สำหรับดูสลิปโอนเงิน -->
+  <div id="slipModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 relative shadow-2xl">
+      <div class="flex justify-between items-center border-b pb-3 mb-3">
+        <h3 class="font-bold text-gray-900 text-sm flex items-center gap-2">
+          <i class="fa-solid fa-file-invoice-dollar text-[#8a6e11]"></i> หลักฐานการโอนเงิน (สลิป)
+        </h3>
+        <button onclick="closeSlipModal()" class="text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
         </button>
+      </div>
+      <div class="bg-gray-100 rounded-xl overflow-hidden min-h-[250px] flex items-center justify-center border">
+        <img id="slipModalImage" src="" alt="สลิปการโอนเงิน" class="max-h-[70vh] object-contain mx-auto">
+      </div>
+      <div class="mt-4 text-center">
+        <a id="downloadSlipBtn" href="#" target="_blank" class="inline-block text-xs bg-[#8a6e11] text-white font-bold px-4 py-2 rounded-xl hover:bg-[#725a0d] transition">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> เปิดไฟล์ขนาดเต็ม
+        </a>
       </div>
     </div>
   </div>
 
   <script>
     let currentUser = {};
-    let allOrders = [];
-    let isAdminOrStaff = false;
-    let currentStatusFilter = 'all';
 
     document.addEventListener('DOMContentLoaded', async () => {
-      try {
-        currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      } catch (e) {
-        currentUser = {};
+      const role = localStorage.getItem('pp_user_role') || 'customer';
+      if (role === 'admin') {
+        document.getElementById('navProducts')?.classList.remove('hidden');
+        document.getElementById('navSales')?.classList.remove('hidden');
+      } else if (role === 'staff') {
+        document.getElementById('navProducts')?.classList.remove('hidden');
       }
+
+      currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
       
-      const role = String(
-        currentUser.role || 
-        (currentUser.userData && currentUser.userData.role) || 
-        'customer'
-      ).toLowerCase();
-
-      isAdminOrStaff = ['admin', 'staff', 'employee'].includes(role);
-
-      applyRolePermissions();
-
       const userId = getUserId();
-      const isLoggedIn = currentUser && Object.keys(currentUser).length > 0;
-      
-      if (!isLoggedIn || (!isAdminOrStaff && !userId)) {
-        alert('กรุณาล็อกอินเข้าสู่ระบบก่อน');
+      if (!userId) {
+        alert('กรุณาล็อกอินเข้าสู่ระบบก่อนดูประวัติการสั่งซื้อ');
         window.location.href = 'login.html';
         return;
       }
 
       await loadOrderHistory();
+      updateCartBadge();
     });
-
-    function applyRolePermissions() {
-      const linkManage = document.getElementById('linkManage');
-      const linkReport = document.getElementById('linkReport');
-      const cartBtn = document.getElementById('cartBtn');
-      const logoutBtn = document.getElementById('logoutBtn');
-      
-      const role = String(
-        currentUser.role || 
-        (currentUser.userData && currentUser.userData.role) || 
-        'customer'
-      ).toLowerCase();
-
-      if (currentUser.username || getUserId()) {
-        if (logoutBtn) logoutBtn.classList.remove('hidden');
-      }
-
-      if (role === 'admin') {
-        if (linkManage) linkManage.classList.remove('hidden');
-        if (linkReport) linkReport.classList.remove('hidden');
-        if (cartBtn) cartBtn.classList.add('hidden');
-      } else if (['staff', 'employee'].includes(role)) {
-        if (linkManage) linkManage.classList.remove('hidden');
-        if (linkReport) linkReport.classList.add('hidden');
-        if (cartBtn) cartBtn.classList.add('hidden');
-      } else {
-        if (linkManage) linkManage.classList.add('hidden');
-        if (linkReport) linkReport.classList.add('hidden');
-        if (cartBtn) cartBtn.classList.remove('hidden');
-      }
-    }
 
     function getUserId() {
       if (!currentUser) return null;
@@ -195,439 +131,154 @@
           || currentUser.user_id 
           || currentUser.userId 
           || (currentUser.userData && currentUser.userData.id)
-          || (currentUser.userData && currentUser.userData.username)
           || (currentUser.user && currentUser.user.id) 
-          || currentUser.username
-          || currentUser.email
           || null;
     }
 
-    function extractSlipUrl(order) {
-      if (!order) return null;
-
-      const possibleKeys = [
-        'slip_url', 'slip_image', 'payment_slip', 'slip', 
-        'slip_path', 'image_url', 'proof_of_payment', 'receipt_url', 'slip_img'
-      ];
-
-      for (let key of possibleKeys) {
-        if (order[key] && typeof order[key] === 'string' && order[key].trim() !== '') {
-          let url = order[key].trim();
-
-          if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image/')) {
-            return url;
-          }
-
-          if (typeof DB !== 'undefined' && DB.getClient) {
-            try {
-              const client = DB.getClient();
-              const { data } = client.storage.from('slips').getPublicUrl(url);
-              if (data && data.publicUrl) return data.publicUrl;
-            } catch (e) {
-              console.warn('Storage URL format error:', e);
-            }
-          }
-          return url;
-        }
-      }
-      return null;
-    }
-
-    function extractProductImageUrl(product) {
-      if (!product) return 'https://via.placeholder.com/150?text=No+Image';
-      
-      const imgKey = product.image_url || product.img || product.product_image;
-      if (!imgKey || typeof imgKey !== 'string' || imgKey.trim() === '') {
-        return 'https://via.placeholder.com/150?text=No+Image';
-      }
-
-      let url = imgKey.trim();
-      if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image/')) {
-        return url;
-      }
-
-      if (typeof DB !== 'undefined' && DB.getClient) {
-        try {
-          const client = DB.getClient();
-          const { data } = client.storage.from('products').getPublicUrl(url);
-          if (data && data.publicUrl) return data.publicUrl;
-        } catch (e) {}
-      }
-      return url;
-    }
-
     async function loadOrderHistory() {
-      const container = document.getElementById('orderList');
+      const container = document.getElementById('ordersContainer');
       const userId = getUserId();
 
       try {
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
-        // แก้ไข: เอาคอลัมน์ color ออกจาก order_items เพื่อป้องกันข้อผิดพลาด
-        let query = client
+        // ดึงรายการคำสั่งซื้อของผู้ใช้งาน
+        const { data: orders, error: ordersError } = await client
           .from('orders')
-          .select(`
-            *,
-            order_items (
-              id,
-              quantity,
-              price,
-              products (
-                id,
-                name,
-                code,
-                image_url
-              )
-            )
-          `)
+          .select('*')
+          .eq('user_id', userId)
           .order('created_at', { ascending: false });
 
-        if (!isAdminOrStaff) {
-          query = query.eq('user_id', userId);
-        }
-
-        const { data: orders, error } = await query;
-        if (error) throw error;
+        if (ordersError) throw ordersError;
 
         if (!orders || orders.length === 0) {
-          allOrders = [];
-          renderOrders([]);
+          container.innerHTML = `
+            <div class="bg-white rounded-2xl p-12 text-center text-gray-400 font-light shadow-sm">
+              <i class="fa-solid fa-receipt text-4xl mb-3 text-gray-300"></i>
+              <p class="text-sm font-semibold">ยังไม่มีประวัติการสั่งซื้อ</p>
+              <a href="index.html" class="inline-block mt-4 bg-[#8a6e11] text-white text-xs px-5 py-2 rounded-xl font-bold">ไปเลือกซื้อสินค้า</a>
+            </div>`;
           return;
         }
 
-        const userIds = [...new Set(orders.map(o => o.user_id).filter(Boolean))];
-        let usersMap = {};
+        container.innerHTML = '';
 
-        if (userIds.length > 0) {
-          try {
-            const { data: uData } = await client
-              .from('users')
-              .select('*')
-              .in('id', userIds);
+        for (const order of orders) {
+          // ดึงรายการ order_items พร้อมข้อมูลสินค้า
+          const { data: items, error: itemsError } = await client
+            .from('order_items')
+            .select(`
+              quantity,
+              price,
+              products ( name, image_url )
+            `)
+            .eq('order_id', order.id);
 
-            if (uData) {
-              uData.forEach(u => { usersMap[u.id] = u; });
-            }
-          } catch (uErr) {
-            console.warn('ไม่สามารถดึงข้อมูลจาก users ได้:', uErr);
+          const card = document.createElement('div');
+          card.className = 'bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4';
+
+          const formattedDate = new Date(order.created_at || Date.now()).toLocaleString('th-TH', {
+            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          });
+
+          // กำหนดสถานะคำสั่งซื้อ
+          let statusBadge = '<span class="bg-amber-100 text-amber-700 text-xs px-3 py-1 rounded-full font-bold"><i class="fa-solid fa-clock"></i> รอตรวจสอบ</span>';
+          if (order.status === 'paid' || order.status === 'completed' || order.status === 'approved') {
+            statusBadge = '<span class="bg-emerald-100 text-emerald-700 text-xs px-3 py-1 rounded-full font-bold"><i class="fa-solid fa-circle-check"></i> ชำระเงินเรียบร้อย</span>';
+          } else if (order.status === 'cancelled' || order.status === 'rejected') {
+            statusBadge = '<span class="bg-red-100 text-red-700 text-xs px-3 py-1 rounded-full font-bold"><i class="fa-solid fa-circle-xmark"></i> ยกเลิกแล้ว</span>';
           }
-        }
 
-        allOrders = orders.map(order => {
-          const u = usersMap[order.user_id] || {};
-          const slipImage = extractSlipUrl(order);
+          let itemsHtml = '';
+          if (items && items.length > 0) {
+            itemsHtml = items.map(item => `
+              <div class="flex items-center gap-3 text-xs py-2 border-b border-gray-50 last:border-none">
+                <img src="${item.products?.image_url || 'https://via.placeholder.com/80'}" class="w-12 h-12 object-contain bg-gray-50 rounded-lg p-1 border shrink-0">
+                <div class="flex-1">
+                  <span class="font-bold text-gray-800 block">${item.products?.name || 'สินค้า'}</span>
+                  <span class="text-gray-400">จำนวน: ${item.quantity} ชิ้น</span>
+                </div>
+                <div class="text-right font-bold text-gray-700">
+                  ฿${(Number(item.price || 0) * item.quantity).toLocaleString()}
+                </div>
+              </div>
+            `).join('');
+          }
 
-          return {
-            ...order,
-            slip_url: slipImage,
-            profiles: {
-              full_name: order.customer_name || u.full_name || u.name || u.username || u.first_name || 'ลูกค้าทั่วไป',
-              phone: order.phone || u.phone || u.tel || u.mobile || '-',
-              email: order.email || u.email || '-',
-              address: order.address || u.address || 'ไม่ระบุที่อยู่จัดส่ง'
-            }
-          };
-        });
+          // ปุ่มดูสลิป
+          const slipButtonHtml = order.slip_url ? `
+            <button onclick="viewSlip('${order.slip_url}')" class="text-xs bg-amber-50 text-[#8a6e11] hover:bg-amber-100 border border-amber-200 font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5">
+              <i class="fa-solid fa-file-invoice"></i> ดูสลิปโอนเงิน
+            </button>
+          ` : `
+            <span class="text-[11px] text-gray-400 italic">ไม่มีแนบสลิป</span>
+          `;
 
-        renderOrders(allOrders);
-
-      } catch (err) {
-        console.error('Error loading orders:', err);
-        container.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-red-500 text-xs">เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err.message}</div>`;
-      }
-    }
-
-    function renderOrders(orders) {
-      const container = document.getElementById('orderList');
-      container.innerHTML = '';
-
-      if (!orders || orders.length === 0) {
-        container.innerHTML = `
-          <div class="bg-white rounded-2xl p-12 text-center text-gray-400 font-light shadow-sm">
-            <i class="fa-solid fa-receipt text-4xl mb-3 text-gray-300"></i>
-            <p>ไม่พบรายการสั่งซื้อ</p>
-          </div>`;
-        return;
-      }
-
-      orders.forEach(order => {
-        const orderDate = new Date(order.created_at).toLocaleString('th-TH', {
-          day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
-
-        const profile = order.profiles || {};
-        const customerName = profile.full_name;
-        const customerPhone = profile.phone;
-        const customerEmail = profile.email;
-        const customerAddress = profile.address;
-        const status = order.status || 'pending';
-
-        const orderCard = document.createElement('div');
-        orderCard.className = 'bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden';
-
-        let itemsHtml = '';
-        (order.order_items || []).forEach(item => {
-          const product = item.products || {};
-          const productImgUrl = extractProductImageUrl(product);
-          const colorInfo = item.color ? `สี: ${item.color} | ` : '';
-
-          itemsHtml += `
-            <div class="flex items-center justify-between gap-4 p-3 bg-gray-50/80 rounded-xl my-2 border border-gray-100">
+          card.innerHTML = `
+            <div class="flex flex-wrap justify-between items-center gap-2 border-b pb-3">
+              <div>
+                <span class="text-[11px] text-gray-400 block">หมายเลขคำสั่งซื้อ: #${order.id}</span>
+                <span class="text-xs text-gray-500 font-medium">${formattedDate}</span>
+              </div>
               <div class="flex items-center gap-3">
-                <div class="w-14 h-14 bg-white rounded-lg p-1 shrink-0 flex items-center justify-center border border-gray-200 overflow-hidden">
-                  <img src="${productImgUrl}" 
-                       onerror="this.onerror=null; this.src='https://via.placeholder.com/100?text=No+Img';" 
-                       class="object-contain h-full w-full rounded">
-                </div>
-                <div>
-                  <h4 class="font-bold text-gray-900 text-xs">${product.name || item.product_name || 'สินค้า'}</h4>
-                  <p class="text-[10px] text-gray-400 mt-0.5">${colorInfo}SKU: ${product.code || product.id || '-'}</p>
-                  <p class="text-[10px] text-[#8a6e11] font-semibold mt-0.5">จำนวน ${item.quantity || 1} เครื่อง × ฿${Number(item.price || 0).toLocaleString()}</p>
-                </div>
+                ${statusBadge}
+              </div>
+            </div>
+
+            <div class="space-y-1">
+              ${itemsHtml}
+            </div>
+
+            <div class="pt-3 border-t flex flex-wrap justify-between items-center gap-2 text-xs">
+              <div class="flex items-center gap-2">
+                ${slipButtonHtml}
               </div>
               <div class="text-right">
-                <span class="text-xs font-extrabold text-gray-900">฿${Number((item.price || 0) * (item.quantity || 1)).toLocaleString()}</span>
+                <span class="text-gray-500">ราคารวมสุทธิ: </span>
+                <span class="text-base font-extrabold text-[#8a6e11]">฿${Number(order.total_amount || 0).toLocaleString()}</span>
               </div>
             </div>
           `;
-        });
 
-        let slipHtml = '';
-        if (order.slip_url) {
-          slipHtml = `
-            <div class="relative group cursor-pointer border border-gray-200 rounded-xl overflow-hidden bg-gray-900 flex items-center justify-center h-52 shadow-inner" onclick="openImageModal('${order.slip_url}')">
-              <img src="${order.slip_url}" 
-                   onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\"text-center p-4 text-red-400 text-xs\"><i class=\"fa-solid fa-triangle-exclamation text-xl mb-1 block\"></i>ไม่สามารถโหลดรูปสลิปได้</div>';" 
-                   class="w-full h-full object-contain group-hover:scale-105 transition duration-300">
-              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white text-xs font-bold gap-2 backdrop-blur-[1px]">
-                <i class="fa-solid fa-magnifying-glass-plus text-xl"></i>
-                <span>คลิกเพื่อดูสลิปขนาดใหญ่</span>
-              </div>
-            </div>
-          `;
-        } else {
-          slipHtml = `
-            <div class="bg-gray-50 p-6 rounded-xl border border-dashed border-gray-200 text-center text-gray-400 flex flex-col items-center justify-center h-52">
-              <i class="fa-solid fa-receipt text-4xl mb-2 text-gray-300"></i>
-              <p class="text-xs font-medium">ยังไม่มีสลิปการโอนเงิน</p>
-              <p class="text-[10px] text-gray-300 mt-1">หรือยังไม่ได้อัปโหลดหลักฐาน</p>
-            </div>
-          `;
+          container.appendChild(card);
         }
 
-        orderCard.innerHTML = `
-          <div class="p-5 flex flex-wrap items-center justify-between gap-4 border-b border-gray-50">
-            <div class="flex items-center gap-6">
-              <div>
-                <span class="text-[10px] text-gray-400 block font-medium">รหัสคำสั่งซื้อ</span>
-                <span class="text-sm font-bold text-gray-900">ORD-${order.id}</span>
-              </div>
-              <div>
-                <span class="text-[10px] text-gray-400 block font-medium">วันที่ทำรายการ</span>
-                <span class="text-xs font-semibold text-gray-600">${orderDate}</span>
-              </div>
-              <div>
-                <span class="text-[10px] text-gray-400 block font-medium">สถานะคำสั่งซื้อ</span>
-                ${getStatusBadge(status)}
-              </div>
-            </div>
-
-            <div class="text-right">
-              <span class="text-[10px] text-gray-400 block font-medium">ยอดชำระสุทธิ</span>
-              <span class="text-xl font-black text-[#8a6e11]">฿${Number(order.total_amount || 0).toLocaleString()}</span>
-            </div>
-          </div>
-
-          <div class="p-5 grid grid-cols-1 md:grid-cols-12 gap-6 bg-white">
-            <div class="md:col-span-7 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
-              <div>
-                <div class="flex items-center gap-2 mb-3">
-                  <i class="fa-regular fa-address-card text-amber-600 text-xs"></i>
-                  <h5 class="text-xs font-bold text-gray-800">ข้อมูลลูกค้าและการจัดส่ง</h5>
-                </div>
-                <div class="grid grid-cols-2 gap-3 text-[11px] text-gray-600 mb-3">
-                  <div>
-                    <span class="text-gray-400 block text-[10px]">ผู้รับสินค้า</span>
-                    <span class="font-bold text-gray-800">${customerName}</span>
-                  </div>
-                  <div>
-                    <span class="text-gray-400 block text-[10px]">เบอร์โทรศัพท์</span>
-                    <span class="font-semibold text-gray-800">${customerPhone}</span>
-                  </div>
-                  <div>
-                    <span class="text-gray-400 block text-[10px]">อีเมล</span>
-                    <span class="text-gray-700">${customerEmail}</span>
-                  </div>
-                  <div>
-                    <span class="text-gray-400 block text-[10px]">รหัสผู้ใช้งาน</span>
-                    <span class="font-medium text-gray-800">${order.user_id || '-'}</span>
-                  </div>
-                </div>
-                <div class="text-[11px] text-gray-600 pt-2 border-t border-gray-100">
-                  <span class="text-gray-400 block text-[10px]">ที่อยู่จัดส่ง</span>
-                  <p class="mt-0.5 leading-relaxed font-medium text-gray-800">${customerAddress}</p>
-                </div>
-              </div>
-
-              <div class="mt-4 pt-3 border-t border-gray-100">
-                <h6 class="text-[11px] font-bold text-gray-700 mb-1">รายการสินค้าในออเดอร์</h6>
-                ${itemsHtml}
-              </div>
-            </div>
-
-            <div class="md:col-span-5 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
-              <div>
-                <div class="flex items-center justify-between mb-3">
-                  <div class="flex items-center gap-2">
-                    <i class="fa-regular fa-file-image text-amber-600 text-xs"></i>
-                    <h5 class="text-xs font-bold text-gray-800">หลักฐานการชำระเงิน (สลิปโอน)</h5>
-                  </div>
-                </div>
-                ${slipHtml}
-              </div>
-
-              ${isAdminOrStaff && status === 'pending' ? `
-                <div class="mt-4 pt-3 border-t border-gray-100">
-                  <span class="text-[10px] font-bold text-gray-500 block mb-2">การอนุมัติคำสั่งซื้อ (เจ้าหน้าที่)</span>
-                  <div class="grid grid-cols-2 gap-2">
-                    <button onclick="updateOrderStatus('${order.id}', 'approved')" class="bg-[#795d0d] hover:bg-[#634c09] text-white py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
-                      <i class="fa-solid fa-circle-check text-xs"></i> อนุมัติ
-                    </button>
-                    <button onclick="updateOrderStatus('${order.id}', 'cancelled')" class="bg-white border border-red-200 hover:bg-red-50 text-red-600 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
-                      <i class="fa-solid fa-circle-xmark text-xs"></i> ปฏิเสธ
-                    </button>
-                  </div>
-                </div>
-              ` : ''}
-            </div>
-          </div>
-        `;
-
-        container.appendChild(orderCard);
-      });
-    }
-
-    function getStatusBadge(status) {
-      if (status === 'approved' || status === 'completed') {
-        return `<span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-200/60">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> ชำระแล้ว (อนุมัติเรียบร้อย)
-        </span>`;
-      } else if (status === 'cancelled') {
-        return `<span class="inline-flex items-center gap-1.5 bg-red-50 text-red-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-red-200/60">
-          <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> ยกเลิกคำสั่งซื้อ
-        </span>`;
-      } else {
-        return `<span class="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 text-[10px] font-bold px-2.5 py-1 rounded-full border border-amber-200/60">
-          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> รอตรวจสอบการชำระเงิน
-        </span>`;
+      } catch (err) {
+        console.error('Error loading order history:', err);
+        container.innerHTML = `<div class="bg-white rounded-2xl p-6 text-center text-red-500 text-xs">เกิดข้อผิดพลาดในการโหลดประวัติ: ${err.message}</div>`;
       }
     }
 
-    function openImageModal(url) {
-      if (!url) return;
-      document.getElementById('modalImg').src = url;
-      document.getElementById('modalDownloadBtn').href = url;
-      const modal = document.getElementById('imageModal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-    }
-
-    function closeImageModal() {
-      const modal = document.getElementById('imageModal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    }
-
-    function setStatusFilter(status) {
-      currentStatusFilter = status;
-
-      const buttons = {
-        all: document.getElementById('btnFilterAll'),
-        pending: document.getElementById('btnFilterPending'),
-        approved: document.getElementById('btnFilterApproved'),
-        cancelled: document.getElementById('btnFilterCancelled')
-      };
-
-      Object.keys(buttons).forEach(key => {
-        if (buttons[key]) {
-          if (key === status) {
-            buttons[key].className = 'px-4 py-1.5 rounded-xl text-xs font-bold transition bg-[#8a6e11] text-white shadow-sm';
-          } else {
-            buttons[key].className = 'px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5';
-          }
-        }
-      });
-
-      filterOrders();
-    }
-
-    function filterOrders() {
-      const search = document.getElementById('searchInput').value.toLowerCase().trim();
-      const selectedDate = document.getElementById('dateInput').value;
-
-      const filtered = allOrders.filter(order => {
-        const profile = order.profiles || {};
-        const customerName = (profile.full_name || '').toLowerCase();
-        const customerPhone = (profile.phone || '').toLowerCase();
-        const customerAddress = (profile.address || '').toLowerCase();
-        const orderIdStr = String(order.id).toLowerCase();
-        const userIdStr = String(order.user_id).toLowerCase();
-
-        const matchesSearch = 
-          orderIdStr.includes(search) ||
-          userIdStr.includes(search) ||
-          customerName.includes(search) ||
-          customerPhone.includes(search) ||
-          customerAddress.includes(search);
-
-        let matchesDate = true;
-        if (selectedDate) {
-          const orderDateStr = new Date(order.created_at).toISOString().split('T')[0];
-          matchesDate = (orderDateStr === selectedDate);
-        }
-
-        let matchesStatus = true;
-        if (currentStatusFilter === 'pending') {
-          matchesStatus = (order.status === 'pending');
-        } else if (currentStatusFilter === 'approved') {
-          matchesStatus = (order.status === 'approved' || order.status === 'completed');
-        } else if (currentStatusFilter === 'cancelled') {
-          matchesStatus = (order.status === 'cancelled');
-        }
-
-        return matchesSearch && matchesDate && matchesStatus;
-      });
-
-      renderOrders(filtered);
-    }
-
-    async function updateOrderStatus(orderId, newStatus) {
-      if (!confirm(`คุณต้องการเปลี่ยนสถานะคำสั่งซื้อเป็น ${newStatus === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ/ยกเลิก'} ใช่หรือไม่?`)) {
-        return;
-      }
-
+    async function updateCartBadge() {
+      const userId = getUserId();
+      if (!userId) return;
       try {
         const client = DB.getClient();
-        const { error } = await client
-          .from('orders')
-          .update({ status: newStatus })
-          .eq('id', orderId);
-
-        if (error) throw error;
-
-        alert('อัปเดตสถานะเรียบร้อยแล้ว');
-        await loadOrderHistory();
-      } catch (err) {
-        console.error('Error updating order:', err);
-        alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ: ' + err.message);
+        const { data } = await client.from('cart').select('quantity').eq('user_id', userId);
+        const count = (data || []).reduce((sum, i) => sum + i.quantity, 0);
+        document.getElementById('navCartBadge').innerText = count;
+      } catch (e) {
+        console.log('Error update cart badge');
       }
+    }
+
+    function viewSlip(url) {
+      document.getElementById('slipModalImage').src = url;
+      document.getElementById('downloadSlipBtn').href = url;
+      document.getElementById('slipModal').classList.remove('hidden');
+    }
+
+    function closeSlipModal() {
+      document.getElementById('slipModal').classList.add('hidden');
     }
 
     function logout() {
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('userSession');
-      window.location.href = 'login.html';
+      if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
+        localStorage.removeItem('pp_user_role');
+        localStorage.removeItem('currentUser');
+        window.location.href = 'login.html';
+      }
     }
   </script>
 </body>
