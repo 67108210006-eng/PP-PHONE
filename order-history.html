@@ -104,12 +104,12 @@
   </main>
 
   <!-- Image Preview Modal -->
-  <div id="imageModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4" onclick="closeImageModal()">
-    <div class="relative max-w-xl w-full bg-white rounded-2xl p-2 shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
-      <button onclick="closeImageModal()" class="absolute top-3 right-3 bg-gray-100 hover:bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center font-bold z-10 transition">
+  <div id="imageModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4 cursor-pointer" onclick="closeImageModal()">
+    <div class="relative max-w-2xl w-full bg-white rounded-2xl p-2 shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
+      <button onclick="closeImageModal()" class="absolute top-3 right-3 bg-gray-900/50 hover:bg-gray-900 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold z-10 transition">
         <i class="fa-solid fa-xmark"></i>
       </button>
-      <img id="modalImg" src="" class="w-full h-auto max-h-[80vh] object-contain rounded-xl">
+      <img id="modalImg" src="" class="w-full h-auto max-h-[85vh] object-contain rounded-xl mx-auto">
     </div>
   </div>
 
@@ -192,6 +192,40 @@
           || null;
     }
 
+    // ฟังก์ชันค้นหารูปภาพสลิปจากทุกคอลัมน์ที่เป็นไปได้
+    function extractSlipUrl(order) {
+      if (!order) return null;
+
+      // ค้นหาตามคอลัมน์ที่เป็นไปได้
+      const possibleKeys = [
+        'slip_url', 'slip_image', 'payment_slip', 'slip', 
+        'slip_path', 'image_url', 'proof_of_payment', 'receipt_url', 'slip_img'
+      ];
+
+      for (let key of possibleKeys) {
+        if (order[key] && typeof order[key] === 'string' && order[key].trim() !== '') {
+          let url = order[key].trim();
+          // กรณีรูปถูกเก็บเป็น Base64 หรือ URL สมบูรณ์
+          if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image/')) {
+            return url;
+          }
+          // กรณีรูปอยู่ใน Supabase Storage Path
+          if (typeof DB !== 'undefined' && DB.getClient) {
+            try {
+              const client = DB.getClient();
+              const { data } = client.storage.from('slips').getPublicUrl(url);
+              if (data && data.publicUrl) return data.publicUrl;
+            } catch (e) {
+              console.warn('Storage URL format error:', e);
+            }
+          }
+          return url;
+        }
+      }
+
+      return null;
+    }
+
     async function loadOrderHistory() {
       const container = document.getElementById('orderList');
       const userId = getUserId();
@@ -200,7 +234,7 @@
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
-        // ดึงข้อมูล orders พร้อมรายการสินค้า
+        // ดึงข้อมูล orders ทั้งหมด
         let query = client
           .from('orders')
           .select(`
@@ -244,21 +278,17 @@
               .in('id', userIds);
 
             if (uData) {
-              uData.forEach(u => {
-                usersMap[u.id] = u;
-              });
+              uData.forEach(u => { usersMap[u.id] = u; });
             }
           } catch (uErr) {
-            console.warn('ไม่สามารถดึงข้อมูลจากตาราง users ได้:', uErr);
+            console.warn('ไม่สามารถดึงข้อมูลจาก users ได้:', uErr);
           }
         }
 
-        // จัดการรวมข้อมูลโปรไฟล์ลูกค้า และค้นหารูปสลิป
+        // รวมข้อมูลและหารูปสลิป
         allOrders = orders.map(order => {
           const u = usersMap[order.user_id] || {};
-
-          // ค้นหารูปภาพสลิปจากชื่อคอลัมน์ที่เป็นไปได้
-          const slipImage = order.slip_url || order.slip_image || order.payment_slip || order.slip || null;
+          const slipImage = extractSlipUrl(order);
 
           return {
             ...order,
@@ -321,7 +351,7 @@
                 <div>
                   <h4 class="font-bold text-gray-900 text-xs">${product.name || 'สินค้า'}</h4>
                   <p class="text-[10px] text-gray-400 mt-0.5">${colorInfo}SKU: ${product.code || product.id}</p>
-                  <p class="text-[10px] text-gray-500 mt-0.5">จำนวน ${item.quantity} เครื่อง × ฿${Number(item.price).toLocaleString()}</p>
+                  <p class="text-[10px] text-[#8a6e11] font-semibold mt-0.5">จำนวน ${item.quantity} เครื่อง × ฿${Number(item.price).toLocaleString()}</p>
                 </div>
               </div>
               <div class="text-right">
@@ -331,22 +361,26 @@
           `;
         });
 
-        // ส่วนแสดงผลสลิปการโอนเงิน
+        // แสดงผลกล่องรูปสลิป
         let slipHtml = '';
         if (order.slip_url) {
           slipHtml = `
-            <div class="relative group cursor-pointer border border-gray-200 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center h-48" onclick="openImageModal('${order.slip_url}')">
-              <img src="${order.slip_url}" class="w-full h-full object-contain group-hover:scale-105 transition duration-300">
-              <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1.5">
-                <i class="fa-solid fa-magnifying-glass-plus"></i> คลิกเพื่อดูสลิปใหญ่
+            <div class="relative group cursor-pointer border border-gray-200 rounded-xl overflow-hidden bg-gray-900 flex items-center justify-center h-52 shadow-inner" onclick="openImageModal('${order.slip_url}')">
+              <img src="${order.slip_url}" 
+                   onerror="this.onerror=null; this.src='https://via.placeholder.com/400x600?text=Error+Loading+Image';" 
+                   class="w-full h-full object-contain group-hover:scale-105 transition duration-300">
+              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white text-xs font-bold gap-2 backdrop-blur-[1px]">
+                <i class="fa-solid fa-magnifying-glass-plus text-xl"></i>
+                <span>คลิกเพื่อดูสลิปขนาดใหญ่</span>
               </div>
             </div>
           `;
         } else {
           slipHtml = `
-            <div class="bg-gray-50 p-6 rounded-xl border border-dashed border-gray-200 text-center text-gray-400">
-              <i class="fa-solid fa-file-image text-3xl mb-2 text-gray-300"></i>
-              <p class="text-[11px]">ไม่พบหลักฐานการชำระเงิน</p>
+            <div class="bg-gray-50 p-6 rounded-xl border border-dashed border-gray-200 text-center text-gray-400 flex flex-col items-center justify-center h-52">
+              <i class="fa-solid fa-receipt text-4xl mb-2 text-gray-300"></i>
+              <p class="text-xs font-medium">ยังไม่มีสลิปการโอนเงิน</p>
+              <p class="text-[10px] text-gray-300 mt-1">หรือยังไม่ได้อัปโหลดหลักฐาน</p>
             </div>
           `;
         }
@@ -354,7 +388,7 @@
         orderCard.innerHTML = `
           <!-- Header Status Bar -->
           <div class="p-5 flex flex-wrap items-center justify-between gap-4 border-b border-gray-50">
-            <div class="flex items-center gap-8">
+            <div class="flex items-center gap-6">
               <div>
                 <span class="text-[10px] text-gray-400 block font-medium">รหัสคำสั่งซื้อ</span>
                 <span class="text-sm font-bold text-gray-900">ORD-${order.id}</span>
@@ -421,7 +455,7 @@
               <div>
                 <div class="flex items-center justify-between mb-3">
                   <div class="flex items-center gap-2">
-                    <i class="fa-regular fa-file-lines text-amber-600 text-xs"></i>
+                    <i class="fa-regular fa-file-image text-amber-600 text-xs"></i>
                     <h5 class="text-xs font-bold text-gray-800">หลักฐานการชำระเงิน (สลิปโอน)</h5>
                   </div>
                 </div>
@@ -469,6 +503,7 @@
     }
 
     function openImageModal(url) {
+      if (!url) return;
       document.getElementById('modalImg').src = url;
       const modal = document.getElementById('imageModal');
       modal.classList.remove('hidden');
