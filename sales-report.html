@@ -142,7 +142,6 @@
       <div class="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
         <div>
           <h2 class="text-lg font-extrabold text-gray-900">อันดับสินค้าขายดี</h2>
-  
         </div>
         <span class="text-xs font-semibold text-[#8a6e11] bg-[#fdfbf7] px-3 py-1 rounded-full border border-[#f0e8d5]">
           <i class="fa-solid fa-fire text-amber-500 mr-1"></i> Best Sellers
@@ -150,7 +149,9 @@
       </div>
       
       <div id="topSellersList" class="space-y-3">
-        <!-- รายการสินค้าจะแสดงด้วย JS -->
+        <div class="text-center py-12 text-gray-400 text-xs">
+          กำลังประมวลผลข้อมูลรายงานยอดขาย...
+        </div>
       </div>
     </div>
 
@@ -161,31 +162,67 @@
     let currentUser = {};
 
     document.addEventListener('DOMContentLoaded', async () => {
-      currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      try {
+        currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      } catch (e) {
+        currentUser = {};
+      }
       
-      if (currentUser.role !== 'admin' && currentUser.role !== 'staff') {
+      const role = String(
+        currentUser.role || 
+        (currentUser.userData && currentUser.userData.role) || 
+        localStorage.getItem('pp_user_role') ||
+        'customer'
+      ).toLowerCase();
+
+      if (!['admin', 'staff', 'employee'].includes(role)) {
         alert('หน้านี้สำหรับสิทธิ์ Admin และ Staff เท่านั้น');
         window.location.href = 'index.html';
         return;
       }
 
-      applyRolePermissions();
+      applyRolePermissions(role);
       await loadSalesReport();
+      await updateCartBadge();
     });
 
-    function applyRolePermissions() {
+    function applyRolePermissions(role) {
       const linkManage = document.getElementById('linkManage');
       const cartBtn = document.getElementById('cartBtn');
       const logoutBtn = document.getElementById('logoutBtn');
 
-      if (currentUser.username || currentUser.id) {
+      if (currentUser.username || currentUser.id || currentUser.email) {
         if (logoutBtn) logoutBtn.classList.remove('hidden');
       }
 
-      if (currentUser.role === 'admin' || currentUser.role === 'staff') {
+      if (['admin', 'staff', 'employee'].includes(role)) {
         if (linkManage) linkManage.classList.remove('hidden');
       }
       if (cartBtn) cartBtn.classList.add('hidden');
+    }
+
+    function extractProductImageUrl(item, pDb) {
+      const imgKey = item.image_url || item.image || item.img || (pDb && (pDb.image_url || pDb.image || pDb.img));
+      
+      if (!imgKey || typeof imgKey !== 'string' || imgKey.trim() === '') {
+        return 'https://via.placeholder.com/150?text=No+Image';
+      }
+
+      let url = imgKey.trim();
+      if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image/')) {
+        return url;
+      }
+
+      if (typeof DB !== 'undefined' && DB.getClient) {
+        try {
+          const client = DB.getClient();
+          const { data } = client.storage.from('products').getPublicUrl(url);
+          if (data && data.publicUrl) return data.publicUrl;
+        } catch (e) {
+          console.warn('Storage URL error:', e);
+        }
+      }
+      return url;
     }
 
     async function loadSalesReport() {
@@ -210,7 +247,7 @@
         console.error('Error fetching data from Supabase:', err);
       }
 
-      // fallback
+      // fallback จาก LocalStorage หากเชื่อมต่อฐานข้อมูลไม่ได้
       if (!orders || orders.length === 0) {
         const localOrders = JSON.parse(localStorage.getItem('pp_orders') || localStorage.getItem('orders') || '[]');
         if (localOrders.length > 0) orders = localOrders;
@@ -235,7 +272,7 @@
       const isIphoneCategory = (cat = '', name = '') => {
         const c = String(cat).toLowerCase();
         const n = String(name).toLowerCase();
-        return c.includes('iphone') || c.includes('phone') || c.includes('IPHONE') || n.includes('iphone') || n.includes('16pm') || n.includes('15pm');
+        return c.includes('iphone') || c.includes('phone') || c.includes('มือถือ') || n.includes('iphone') || n.includes('16pm') || n.includes('15pm');
       };
 
       // 1. ดึงข้อมูลสินค้าจาก order_items
@@ -253,7 +290,7 @@
           const isPhone = isIphoneCategory(categoryRaw, name);
           const categoryDisplay = isPhone ? 'IPHONE' : 'accessory';
           const unitText = isPhone ? 'เครื่อง' : 'ชิ้น';
-          const imageUrl = item.image_url || item.image || item.img || pDb.image_url || pDb.image || 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=200&auto=format&fit=crop';
+          const imageUrl = extractProductImageUrl(item, pDb);
 
           if (isPhone) {
             iphoneSoldTotal += qty;
@@ -278,7 +315,7 @@
         });
       }
 
-      // 2. ถ้า order_items ไม่มี ให้ใช้อาร์เรย์จากตาราง orders
+      // 2. ถ้า order_items ใน Supabase ไม่มี ให้ใช้อาร์เรย์ย่อยจากตาราง orders
       if (Object.keys(productSalesMap).length === 0 && orders.length > 0) {
         orders.forEach(order => {
           let items = order.items || order.order_items || order.cart || order.products || [];
@@ -302,7 +339,7 @@
             const isPhone = isIphoneCategory(categoryRaw, name);
             const categoryDisplay = isPhone ? 'IPHONE' : 'accessory';
             const unitText = isPhone ? 'เครื่อง' : 'ชิ้น';
-            const imageUrl = item.image_url || item.image || item.img || pDb.image_url || pDb.image || 'https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=200&auto=format&fit=crop';
+            const imageUrl = extractProductImageUrl(item, pDb);
 
             if (isPhone) {
               iphoneSoldTotal += qty;
@@ -364,7 +401,7 @@
         return;
       }
 
-      // Render สินค้าขายดี
+      // Render รายการสินค้าขายดี
       topSellers.forEach(item => {
         const itemRow = document.createElement('div');
         itemRow.className = 'flex items-center justify-between p-3 sm:p-4 border border-gray-100 rounded-xl hover:bg-gray-50/80 transition';
@@ -376,7 +413,7 @@
         itemRow.innerHTML = `
           <div class="flex items-center gap-4">
             <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white flex items-center justify-center overflow-hidden flex-shrink-0 p-1 border border-gray-100 shadow-sm">
-              <img src="${item.image_url}" alt="${item.name}" class="object-contain h-full w-full" onerror="this.src='https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=200&auto=format&fit=crop'">
+              <img src="${item.image_url}" alt="${item.name}" class="object-contain h-full w-full" onerror="this.onerror=null; this.src='https://via.placeholder.com/150?text=No+Image';">
             </div>
             <div>
               <div class="flex items-center gap-2 mb-1">
@@ -386,7 +423,7 @@
               <h3 class="font-extrabold text-gray-900 text-sm sm:text-base line-clamp-1">${item.name}</h3>
             </div>
           </div>
-          <div class="text-right pl-4">
+          <div class="text-right pl-4 shrink-0">
             <div class="text-sm sm:text-base font-extrabold text-[#8a6e11]">฿${Number(item.price).toLocaleString()}</div>
             <div class="text-[10px] sm:text-xs font-bold text-emerald-600 mt-1 bg-emerald-50 px-2.5 py-0.5 rounded-full inline-block">ขายแล้ว ${item.soldCount} ${item.unitText}</div>
           </div>
@@ -396,10 +433,24 @@
       });
     }
 
+    async function updateCartBadge() {
+      try {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const count = cart.reduce((total, item) => total + (item.quantity || 1), 0);
+        const badge = document.getElementById('cartCount');
+        if (badge) badge.innerText = count;
+      } catch (e) {
+        console.warn('Error updating cart count:', e);
+      }
+    }
+
     function logout() {
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('userSession');
-      window.location.href = 'login.html';
+      if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('userSession');
+        localStorage.removeItem('pp_user_role');
+        window.location.href = 'login.html';
+      }
     }
   </script>
 </body>
