@@ -103,6 +103,16 @@
     </div>
   </main>
 
+  <!-- Image Preview Modal -->
+  <div id="imageModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4" onclick="closeImageModal()">
+    <div class="relative max-w-xl w-full bg-white rounded-2xl p-2 shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
+      <button onclick="closeImageModal()" class="absolute top-3 right-3 bg-gray-100 hover:bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center font-bold z-10 transition">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <img id="modalImg" src="" class="w-full h-auto max-h-[80vh] object-contain rounded-xl">
+    </div>
+  </div>
+
   <script>
     let currentUser = {};
     let allOrders = [];
@@ -190,15 +200,11 @@
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
-        // Query ดึงคำสั่งซื้อโดยระบุคอลัมน์มาตรฐานที่มีจริงในตาราง orders
+        // ดึงข้อมูล orders พร้อมรายการสินค้า
         let query = client
           .from('orders')
           .select(`
-            id,
-            user_id,
-            total_amount,
-            status,
-            created_at,
+            *,
             order_items (
               id,
               quantity,
@@ -226,38 +232,42 @@
           return;
         }
 
-        // ดึงข้อมูลลูกค้าจากตาราง profiles แยกต่างหาก
+        // ดึงข้อมูลผู้ใช้งานจากตาราง users
         const userIds = [...new Set(orders.map(o => o.user_id).filter(Boolean))];
-        let profilesMap = {};
+        let usersMap = {};
 
         if (userIds.length > 0) {
           try {
-            const { data: profiles } = await client
-              .from('profiles')
+            const { data: uData } = await client
+              .from('users')
               .select('*')
               .in('id', userIds);
 
-            if (profiles) {
-              profiles.forEach(p => {
-                profilesMap[p.id] = p;
+            if (uData) {
+              uData.forEach(u => {
+                usersMap[u.id] = u;
               });
             }
-          } catch (pErr) {
-            console.warn('ไม่สามารถดึงข้อมูลโปรไฟล์ได้:', pErr);
+          } catch (uErr) {
+            console.warn('ไม่สามารถดึงข้อมูลจากตาราง users ได้:', uErr);
           }
         }
 
-        // รวมข้อมูล profiles เข้ากับออเดอร์
+        // จัดการรวมข้อมูลโปรไฟล์ลูกค้า และค้นหารูปสลิป
         allOrders = orders.map(order => {
-          const userProfile = profilesMap[order.user_id] || {};
+          const u = usersMap[order.user_id] || {};
+
+          // ค้นหารูปภาพสลิปจากชื่อคอลัมน์ที่เป็นไปได้
+          const slipImage = order.slip_url || order.slip_image || order.payment_slip || order.slip || null;
 
           return {
             ...order,
+            slip_url: slipImage,
             profiles: {
-              full_name: userProfile.full_name || userProfile.name || userProfile.username || 'ลูกค้าทั่วไป',
-              phone: userProfile.phone || userProfile.mobile || '-',
-              email: userProfile.email || '-',
-              address: userProfile.address || 'ไม่ระบุที่อยู่จัดส่ง'
+              full_name: order.customer_name || u.full_name || u.name || u.username || u.first_name || 'ลูกค้าทั่วไป',
+              phone: order.phone || u.phone || u.tel || u.mobile || '-',
+              email: order.email || u.email || '-',
+              address: order.address || u.address || 'ไม่ระบุที่อยู่จัดส่ง'
             }
           };
         });
@@ -298,170 +308,145 @@
         const orderCard = document.createElement('div');
         orderCard.className = 'bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden';
 
-        if (status === 'pending' || isAdminOrStaff) {
-          let itemsHtml = '';
-          (order.order_items || []).forEach(item => {
-            const product = item.products || {};
-            const colorInfo = item.color ? `สี: ${item.color} | ` : '';
-            itemsHtml += `
-              <div class="flex items-center justify-between gap-4 p-3 bg-gray-50/60 rounded-xl my-2">
-                <div class="flex items-center gap-3">
-                  <div class="w-14 h-14 bg-white rounded-lg p-1 shrink-0 flex items-center justify-center border border-gray-100">
-                    <img src="${product.image_url || 'https://via.placeholder.com/100'}" class="object-contain h-full w-full">
-                  </div>
-                  <div>
-                    <h4 class="font-bold text-gray-900 text-xs">${product.name || 'สินค้า'}</h4>
-                    <p class="text-[10px] text-gray-400 mt-0.5">${colorInfo}SKU: ${product.code || product.id}</p>
-                    <p class="text-[10px] text-gray-500 mt-0.5">จำนวน ${item.quantity} เครื่อง × ฿${Number(item.price).toLocaleString()}</p>
-                  </div>
+        let itemsHtml = '';
+        (order.order_items || []).forEach(item => {
+          const product = item.products || {};
+          const colorInfo = item.color ? `สี: ${item.color} | ` : '';
+          itemsHtml += `
+            <div class="flex items-center justify-between gap-4 p-3 bg-gray-50/60 rounded-xl my-2">
+              <div class="flex items-center gap-3">
+                <div class="w-14 h-14 bg-white rounded-lg p-1 shrink-0 flex items-center justify-center border border-gray-100">
+                  <img src="${product.image_url || 'https://via.placeholder.com/100'}" class="object-contain h-full w-full">
                 </div>
-                <div class="text-right">
-                  <span class="text-xs font-extrabold text-gray-900">฿${Number(item.price * item.quantity).toLocaleString()}</span>
+                <div>
+                  <h4 class="font-bold text-gray-900 text-xs">${product.name || 'สินค้า'}</h4>
+                  <p class="text-[10px] text-gray-400 mt-0.5">${colorInfo}SKU: ${product.code || product.id}</p>
+                  <p class="text-[10px] text-gray-500 mt-0.5">จำนวน ${item.quantity} เครื่อง × ฿${Number(item.price).toLocaleString()}</p>
                 </div>
               </div>
-            `;
-          });
-
-          orderCard.innerHTML = `
-            <!-- Header Status Bar -->
-            <div class="p-5 flex flex-wrap items-center justify-between gap-4 border-b border-gray-50">
-              <div class="flex items-center gap-8">
-                <div>
-                  <span class="text-[10px] text-gray-400 block font-medium">รหัสคำสั่งซื้อ</span>
-                  <span class="text-sm font-bold text-gray-900">ORD-${order.id}</span>
-                </div>
-                <div>
-                  <span class="text-[10px] text-gray-400 block font-medium">วันที่ทำรายการ</span>
-                  <span class="text-xs font-semibold text-gray-600">${orderDate}</span>
-                </div>
-                <div>
-                  <span class="text-[10px] text-gray-400 block font-medium">สถานะคำสั่งซื้อ</span>
-                  ${getStatusBadge(status)}
-                </div>
-              </div>
-
               <div class="text-right">
-                <span class="text-[10px] text-gray-400 block font-medium">ยอดชำระสุทธิ</span>
-                <span class="text-xl font-black text-gray-900">฿${Number(order.total_amount || 0).toLocaleString()}</span>
+                <span class="text-xs font-extrabold text-gray-900">฿${Number(item.price * item.quantity).toLocaleString()}</span>
               </div>
             </div>
+          `;
+        });
 
-            <!-- Details Section -->
-            <div class="p-5 grid grid-cols-1 md:grid-cols-12 gap-6 bg-white">
-              
-              <!-- Customer & Shipping Info -->
-              <div class="md:col-span-7 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
-                <div>
-                  <div class="flex items-center gap-2 mb-3">
-                    <i class="fa-regular fa-address-card text-amber-600 text-xs"></i>
-                    <h5 class="text-xs font-bold text-gray-800">ข้อมูลลูกค้าและการจัดส่ง (ดึงจากโปรไฟล์)</h5>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3 text-[11px] text-gray-600 mb-3">
-                    <div>
-                      <span class="text-gray-400 block text-[10px]">ผู้รับสินค้า</span>
-                      <span class="font-bold text-gray-800">${customerName}</span>
-                    </div>
-                    <div>
-                      <span class="text-gray-400 block text-[10px]">เบอร์โทรศัพท์</span>
-                      <span class="font-semibold text-gray-800">${customerPhone}</span>
-                    </div>
-                    <div>
-                      <span class="text-gray-400 block text-[10px]">อีเมล</span>
-                      <span class="text-gray-700">${customerEmail}</span>
-                    </div>
-                    <div>
-                      <span class="text-gray-400 block text-[10px]">รหัสผู้ใช้งาน</span>
-                      <span class="font-medium text-gray-800">${order.user_id || '-'}</span>
-                    </div>
-                  </div>
-                  <div class="text-[11px] text-gray-600 pt-2 border-t border-gray-100">
-                    <span class="text-gray-400 block text-[10px]">ที่อยู่จัดส่ง</span>
-                    <p class="mt-0.5 leading-relaxed font-medium text-gray-800">${customerAddress}</p>
-                  </div>
-                </div>
-
-                <!-- Product Items Box Inside -->
-                <div class="mt-4 pt-3 border-t border-gray-100">
-                  <h6 class="text-[11px] font-bold text-gray-700 mb-1">รายการสินค้าในออเดอร์</h6>
-                  ${itemsHtml}
-                </div>
-              </div>
-
-              <!-- Payment Slip & Approval Section -->
-              <div class="md:col-span-5 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
-                <div>
-                  <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-2">
-                      <i class="fa-regular fa-file-lines text-amber-600 text-xs"></i>
-                      <h5 class="text-xs font-bold text-gray-800">หลักฐานการชำระเงิน</h5>
-                    </div>
-                    <span class="text-[9px] bg-amber-100 text-amber-800 font-medium px-2 py-0.5 rounded">ตรวจสอบแล้ว</span>
-                  </div>
-
-                  <!-- Slip Box -->
-                  <div class="bg-white p-3 rounded-lg border border-gray-200 flex items-center gap-3">
-                    <div class="w-12 h-14 bg-emerald-50 text-emerald-600 rounded border border-emerald-100 flex flex-col items-center justify-center shrink-0">
-                      <i class="fa-solid fa-receipt text-lg"></i>
-                      <span class="text-[7px] font-bold mt-1">SUCCESS</span>
-                    </div>
-                    <div class="text-[10px] text-gray-600 flex-1">
-                      <p class="font-medium">ทำรายการเมื่อ: <span class="font-bold text-gray-800">${orderDate}</span></p>
-                      <p class="font-bold text-[#8a6e11] mt-0.5">ยอดชำระ: ฿${Number(order.total_amount).toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Admin Action Buttons -->
-                ${isAdminOrStaff && status === 'pending' ? `
-                  <div class="mt-4 pt-3 border-t border-gray-100">
-                    <span class="text-[10px] font-bold text-gray-500 block mb-2">การอนุมัติคำสั่งซื้อ (เจ้าหน้าที่)</span>
-                    <div class="grid grid-cols-2 gap-2">
-                      <button onclick="updateOrderStatus('${order.id}', 'approved')" class="bg-[#795d0d] hover:bg-[#634c09] text-white py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-circle-check text-xs"></i> อนุมัติ
-                      </button>
-                      <button onclick="updateOrderStatus('${order.id}', 'cancelled')" class="bg-white border border-red-200 hover:bg-red-50 text-red-600 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-circle-xmark text-xs"></i> ปฏิเสธ
-                      </button>
-                    </div>
-                  </div>
-                ` : ''}
+        // ส่วนแสดงผลสลิปการโอนเงิน
+        let slipHtml = '';
+        if (order.slip_url) {
+          slipHtml = `
+            <div class="relative group cursor-pointer border border-gray-200 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center h-48" onclick="openImageModal('${order.slip_url}')">
+              <img src="${order.slip_url}" class="w-full h-full object-contain group-hover:scale-105 transition duration-300">
+              <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1.5">
+                <i class="fa-solid fa-magnifying-glass-plus"></i> คลิกเพื่อดูสลิปใหญ่
               </div>
             </div>
           `;
         } else {
-          orderCard.innerHTML = `
-            <div class="p-5 flex flex-wrap items-center justify-between gap-4">
-              <div class="grid grid-cols-2 md:grid-cols-4 gap-6 flex-1 items-center">
-                <div>
-                  <span class="text-[10px] text-gray-400 block font-medium">รหัสคำสั่งซื้อ</span>
-                  <span class="text-xs font-bold text-gray-900">ORD-${order.id}</span>
-                </div>
-                <div>
-                  <span class="text-[10px] text-gray-400 block font-medium">วันที่ทำรายการ</span>
-                  <span class="text-xs font-semibold text-gray-600">${orderDate}</span>
-                </div>
-                <div>
-                  <span class="text-[10px] text-gray-400 block font-medium">ลูกค้า</span>
-                  <span class="text-xs font-bold text-gray-800">${customerName}</span>
-                </div>
-                <div>
-                  <span class="text-[10px] text-gray-400 block font-medium">สถานะคำสั่งซื้อ</span>
-                  ${getStatusBadge(status)}
-                </div>
-              </div>
-
-              <div class="flex items-center gap-6">
-                <div class="text-right">
-                  <span class="text-[10px] text-gray-400 block font-medium">ยอดรวม</span>
-                  <span class="text-lg font-black text-[#8a6e11]">฿${Number(order.total_amount || 0).toLocaleString()}</span>
-                </div>
-                <button onclick="viewReceipt('${order.id}')" class="flex items-center gap-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 px-3 py-1.5 rounded-xl text-xs font-semibold transition">
-                  <i class="fa-regular fa-file-lines"></i> ใบเสร็จ
-                </button>
-              </div>
+          slipHtml = `
+            <div class="bg-gray-50 p-6 rounded-xl border border-dashed border-gray-200 text-center text-gray-400">
+              <i class="fa-solid fa-file-image text-3xl mb-2 text-gray-300"></i>
+              <p class="text-[11px]">ไม่พบหลักฐานการชำระเงิน</p>
             </div>
           `;
         }
+
+        orderCard.innerHTML = `
+          <!-- Header Status Bar -->
+          <div class="p-5 flex flex-wrap items-center justify-between gap-4 border-b border-gray-50">
+            <div class="flex items-center gap-8">
+              <div>
+                <span class="text-[10px] text-gray-400 block font-medium">รหัสคำสั่งซื้อ</span>
+                <span class="text-sm font-bold text-gray-900">ORD-${order.id}</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-gray-400 block font-medium">วันที่ทำรายการ</span>
+                <span class="text-xs font-semibold text-gray-600">${orderDate}</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-gray-400 block font-medium">สถานะคำสั่งซื้อ</span>
+                ${getStatusBadge(status)}
+              </div>
+            </div>
+
+            <div class="text-right">
+              <span class="text-[10px] text-gray-400 block font-medium">ยอดชำระสุทธิ</span>
+              <span class="text-xl font-black text-[#8a6e11]">฿${Number(order.total_amount || 0).toLocaleString()}</span>
+            </div>
+          </div>
+
+          <!-- Details Section -->
+          <div class="p-5 grid grid-cols-1 md:grid-cols-12 gap-6 bg-white">
+            
+            <!-- Customer & Shipping Info -->
+            <div class="md:col-span-7 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center gap-2 mb-3">
+                  <i class="fa-regular fa-address-card text-amber-600 text-xs"></i>
+                  <h5 class="text-xs font-bold text-gray-800">ข้อมูลลูกค้าและการจัดส่ง</h5>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-[11px] text-gray-600 mb-3">
+                  <div>
+                    <span class="text-gray-400 block text-[10px]">ผู้รับสินค้า</span>
+                    <span class="font-bold text-gray-800">${customerName}</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-400 block text-[10px]">เบอร์โทรศัพท์</span>
+                    <span class="font-semibold text-gray-800">${customerPhone}</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-400 block text-[10px]">อีเมล</span>
+                    <span class="text-gray-700">${customerEmail}</span>
+                  </div>
+                  <div>
+                    <span class="text-gray-400 block text-[10px]">รหัสผู้ใช้งาน</span>
+                    <span class="font-medium text-gray-800">${order.user_id || '-'}</span>
+                  </div>
+                </div>
+                <div class="text-[11px] text-gray-600 pt-2 border-t border-gray-100">
+                  <span class="text-gray-400 block text-[10px]">ที่อยู่จัดส่ง</span>
+                  <p class="mt-0.5 leading-relaxed font-medium text-gray-800">${customerAddress}</p>
+                </div>
+              </div>
+
+              <!-- Product Items Box -->
+              <div class="mt-4 pt-3 border-t border-gray-100">
+                <h6 class="text-[11px] font-bold text-gray-700 mb-1">รายการสินค้าในออเดอร์</h6>
+                ${itemsHtml}
+              </div>
+            </div>
+
+            <!-- Payment Slip & Approval Section -->
+            <div class="md:col-span-5 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <i class="fa-regular fa-file-lines text-amber-600 text-xs"></i>
+                    <h5 class="text-xs font-bold text-gray-800">หลักฐานการชำระเงิน (สลิปโอน)</h5>
+                  </div>
+                </div>
+
+                <!-- Slip Display -->
+                ${slipHtml}
+              </div>
+
+              <!-- Admin Action Buttons -->
+              ${isAdminOrStaff && status === 'pending' ? `
+                <div class="mt-4 pt-3 border-t border-gray-100">
+                  <span class="text-[10px] font-bold text-gray-500 block mb-2">การอนุมัติคำสั่งซื้อ (เจ้าหน้าที่)</span>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button onclick="updateOrderStatus('${order.id}', 'approved')" class="bg-[#795d0d] hover:bg-[#634c09] text-white py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+                      <i class="fa-solid fa-circle-check text-xs"></i> อนุมัติ
+                    </button>
+                    <button onclick="updateOrderStatus('${order.id}', 'cancelled')" class="bg-white border border-red-200 hover:bg-red-50 text-red-600 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
+                      <i class="fa-solid fa-circle-xmark text-xs"></i> ปฏิเสธ
+                    </button>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
 
         container.appendChild(orderCard);
       });
@@ -481,6 +466,19 @@
           <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> รอตรวจสอบการชำระเงิน
         </span>`;
       }
+    }
+
+    function openImageModal(url) {
+      document.getElementById('modalImg').src = url;
+      const modal = document.getElementById('imageModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeImageModal() {
+      const modal = document.getElementById('imageModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
     }
 
     function setStatusFilter(status) {
@@ -566,10 +564,6 @@
         console.error('Error updating order:', err);
         alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ: ' + err.message);
       }
-    }
-
-    function viewReceipt(orderId) {
-      alert(`กำลังเปิดใบเสร็จสำหรับคำสั่งซื้อ ORD-${orderId}`);
     }
 
     function logout() {
