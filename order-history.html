@@ -1,139 +1,4 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ประวัติการสั่งซื้อ - PP PHONE</title>
-  
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="db.js"></script>
-
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
-    body { font-family: 'Prompt', sans-serif; }
-  </style>
-</head>
-<body class="bg-[#f7f6f2] min-h-screen text-gray-800 flex flex-col">
-
-  <!-- Navigation Bar -->
-  <nav class="bg-white border-b border-gray-100 sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-      
-      <!-- Logo -->
-      <a href="index.html" class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full border-2 border-[#a17d1a] flex flex-col items-center justify-center text-[#a17d1a]">
-          <span class="text-[11px] font-extrabold leading-none">PP</span>
-          <span class="text-[7px] font-bold tracking-tighter leading-none mt-0.5">PHONE</span>
-        </div>
-        <span class="text-xl font-extrabold text-[#a17d1a] tracking-wider">PP PHONE</span>
-      </a>
-
-      <!-- Menu Navigation -->
-      <div class="hidden md:flex items-center gap-8 text-xs font-semibold text-gray-500">
-        <a href="index.html" class="hover:text-[#8a6e11] transition">สินค้า</a>
-        <a href="order-history.html" class="text-[#8a6e11] border-b-2 border-[#8a6e11] pb-1">ประวัติการสั่งซื้อ</a>
-        <a href="manage-products.html" id="linkManage" class="hover:text-[#8a6e11] transition hidden">จัดการสินค้า</a>
-        <a href="sales-report.html" id="linkReport" class="hover:text-[#8a6e11] transition hidden">รายงานยอดขาย</a>
-      </div>
-
-      <!-- User Profile & Cart Icon -->
-      <div class="flex items-center gap-3">
-        <a href="cart.html" id="cartBtn" class="relative w-9 h-9 rounded-full bg-[#8a6e11] text-white flex items-center justify-center shadow-sm hover:opacity-90 transition">
-          <i class="fa-solid fa-cart-shopping text-xs"></i>
-          <span id="cartCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">0</span>
-        </a>
-        
-        <div class="flex items-center gap-2">
-          <a href="login.html" id="userBadge" class="w-9 h-9 rounded-full bg-[#8a6e11] text-white flex items-center justify-center shadow-sm hover:opacity-90 transition">
-            <i class="fa-solid fa-user text-xs"></i>
-          </a>
-          <button onclick="logout()" id="logoutBtn" class="hidden text-xs text-red-500 font-bold hover:underline ml-1">
-            ออกจากระบบ
-          </button>
-        </div>
-      </div>
-    </div>
-  </nav>
-
-  <!-- Main Content -->
-  <main class="max-w-6xl mx-auto px-6 py-8 flex-1 w-full">
-    <div class="mb-6">
-      <h1 class="text-3xl font-bold text-gray-900">ประวัติการสั่งซื้อ</h1>
-      <p class="text-xs text-gray-400 mt-1">ดูประวัติและสถานะการสั่งซื้อทั้งหมด</p>
-    </div>
-
-    <!-- Filter Bar (รวมค้นหา + วันที่ + สถานะ) -->
-    <div class="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-gray-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-6 shadow-sm">
-      
-      <!-- แท็บเลือกสถานะ -->
-      <div class="flex items-center gap-1.5 overflow-x-auto pb-2 md:pb-0 scrollbar-none">
-        <button onclick="setStatusFilter('all')" id="btnFilterAll" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition bg-[#8a6e11] text-white shadow-sm whitespace-nowrap">
-          ทั้งหมด
-        </button>
-        <button onclick="setStatusFilter('pending')" id="btnFilterPending" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5 whitespace-nowrap">
-          <span class="w-2 h-2 rounded-full bg-amber-500"></span> รอตรวจสอบ
-        </button>
-        <button onclick="setStatusFilter('approved')" id="btnFilterApproved" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5 whitespace-nowrap">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span> อนุมัติแล้ว
-        </button>
-        <button onclick="setStatusFilter('cancelled')" id="btnFilterCancelled" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5 whitespace-nowrap">
-          <span class="w-2 h-2 rounded-full bg-red-500"></span> ยกเลิก
-        </button>
-      </div>
-
-      <!-- ช่องค้นหา และ ตัวเลือกวันที่ -->
-      <div class="flex flex-wrap md:flex-nowrap items-center gap-2">
-        <!-- ช่องค้นหา -->
-        <div class="relative flex-1 md:w-56">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-          <input type="text" id="searchInput" oninput="filterOrders()" placeholder="ค้นหารหัส / ชื่อลูกค้า..." 
-                 class="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#8a6e11] focus:bg-white transition">
-        </div>
-
-        <!-- ตัวเลือกวันที่ (เหลือ 1 ช่อง) -->
-        <div class="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl px-2 py-1">
-          <input type="date" id="filterDate" onchange="filterOrders()" class="bg-transparent text-xs text-gray-600 focus:outline-none">
-        </div>
-
-        <!-- ปุ่มล้างตัวกรองวันที่/ค้นหา -->
-        <button onclick="resetFilters()" title="ล้างตัวกรอง" class="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs rounded-xl font-bold transition shrink-0">
-          <i class="fa-solid fa-rotate-left"></i>
-        </button>
-      </div>
-
-    </div>
-
-    <!-- Orders List Container -->
-    <div id="orderList" class="space-y-4">
-      <div class="bg-white rounded-2xl p-12 text-center text-gray-400 font-light shadow-sm">
-        กำลังโหลดประวัติการสั่งซื้อ...
-      </div>
-    </div>
-  </main>
-
-  <!-- Image Preview Modal -->
-  <div id="imageModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4 cursor-pointer" onclick="closeImageModal()">
-    <div class="relative max-w-2xl w-full bg-white rounded-2xl p-3 shadow-2xl overflow-hidden flex flex-col items-center" onclick="event.stopPropagation()">
-      <button onclick="closeImageModal()" class="absolute top-3 right-3 bg-gray-900/60 hover:bg-gray-900 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold z-10 transition">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-      <div class="w-full bg-gray-900 rounded-xl p-2 flex items-center justify-center min-h-[300px]">
-        <img id="modalImg" src="" class="max-h-[75vh] w-auto object-contain rounded-lg">
-      </div>
-      <div class="mt-3 flex gap-2 w-full justify-end">
-        <a id="modalDownloadBtn" href="#" target="_blank" class="px-4 py-2 bg-[#8a6e11] hover:bg-[#725a0e] text-white text-xs rounded-xl font-bold transition flex items-center gap-1.5">
-          <i class="fa-solid fa-up-right-from-square text-[10px]"></i> เปิดดูภาพขนาดเต็ม
-        </a>
-        <button onclick="closeImageModal()" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded-xl font-bold transition">
-          ปิด
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <script>
+<script>
     let currentUser = {};
     let allOrders = [];
     let isAdminOrStaff = false;
@@ -169,6 +34,34 @@
       await loadOrderHistory();
       await updateCartBadge();
     });
+
+    // --- ฟังก์ชันออกจากระบบ (เพิ่มที่นี่) ---
+    function logout() {
+      if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('pp_user_role');
+        sessionStorage.clear();
+        
+        // ถ้ามีใช้งาน Supabase Auth สามารถปลดล็อกบรรทัดนี้ได้
+        // if (typeof DB !== 'undefined' && DB.getClient) { DB.getClient().auth.signOut(); }
+
+        window.location.href = 'login.html';
+      }
+    }
+
+    // --- ฟังก์ชันอัปเดตจำนวนสินค้าในตะกร้า (เพิ่มที่นี่) ---
+    async function updateCartBadge() {
+      const cartCountEl = document.getElementById('cartCount');
+      if (!cartCountEl) return;
+      
+      try {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        cartCountEl.textContent = totalItems;
+      } catch (e) {
+        cartCountEl.textContent = '0';
+      }
+    }
 
     function applyRolePermissions() {
       const linkManage = document.getElementById('linkManage');
@@ -408,7 +301,7 @@
           slipHtml = `
             <div class="relative group cursor-pointer border border-gray-200 rounded-xl overflow-hidden bg-gray-900 flex items-center justify-center h-52 shadow-inner" onclick="openImageModal('${order.slip_url}')">
               <img src="${order.slip_url}" 
-                   onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'text-center p-4 text-red-400 text-xs\'><i class=\'fa-solid fa-triangle-exclamation text-xl mb-1 block\'></i>ไม่สามารถโหลดรูปสลิปได้</div>';" 
+                   onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'text-center p-4 text-red-400 text-xs\\'><i class=\\'fa-solid fa-triangle-exclamation text-xl mb-1 block\\'></i>ไม่สามารถโหลดรูปสลิปได้</div>';" 
                    class="w-full h-full object-contain group-hover:scale-105 transition duration-300">
               <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white text-xs font-bold gap-2 backdrop-blur-[1px]">
                 <i class="fa-solid fa-magnifying-glass-plus text-xl"></i>
@@ -675,6 +568,12 @@
       filterOrders();
     }
 
+    function resetFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('filterDate').value = '';
+      setStatusFilter('all');
+    }
+
     function filterOrders() {
       const searchKeyword = (document.getElementById('searchInput').value || '').toLowerCase().trim();
       const filterDateVal = document.getElementById('filterDate').value;
@@ -708,12 +607,6 @@
       });
 
       renderOrders(filtered);
-    }
-
-    function resetFilters() {
-      document.getElementById('searchInput').value = '';
-      document.getElementById('filterDate').value = '';
-      setStatusFilter('all');
     }
   </script>
 </body>
