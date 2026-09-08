@@ -17,7 +17,7 @@
 </head>
 <body class="bg-[#f7f6f2] min-h-screen text-gray-800 flex flex-col">
 
-  <!-- Navigation Bar (ปรับตามภาพ) -->
+  <!-- Navigation Bar -->
   <nav class="bg-white border-b border-gray-100 sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
       
@@ -38,20 +38,17 @@
         <a href="sales-report.html" id="navSales" class="hover:text-[#8a6e11] transition py-1 hidden">รายงานยอดขาย</a>
       </div>
 
-      <!-- ไอคอนขวามือ (ตะกร้า + โปรไฟล์ + ออกจากระบบ) -->
+      <!-- ไอคอนขวามือ -->
       <div class="flex items-center gap-4">
-        <!-- ไอคอนตะกร้าสินค้า ( Active หน้าปัจจุบัน ) -->
         <a href="cart.html" class="relative w-10 h-10 rounded-full bg-[#8a6e11] text-white flex items-center justify-center transition hover:opacity-90">
           <i class="fa-solid fa-cart-shopping text-sm"></i>
           <span id="navCartBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">0</span>
         </a>
 
-        <!-- ไอคอนโปรไฟล์ -->
         <div class="w-10 h-10 rounded-full bg-[#8a6e11] text-white flex items-center justify-center text-base font-bold">
           <i class="fa-solid fa-user"></i>
         </div>
 
-        <!-- ปุ่มออกจากระบบ -->
         <button onclick="logout()" class="text-xs font-bold text-red-500 hover:text-red-600 transition ml-1">
           ออกจากระบบ
         </button>
@@ -69,10 +66,10 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
       
-      <!-- ฝั่งซ้าย: ข้อมูลการจัดส่ง + รายการสินค้า -->
+      <!-- ฝั่งซ้าย: ข้อมูลผู้สั่งซื้อ + รายการสินค้า -->
       <div class="lg:col-span-2 space-y-6">
         
-        <!-- ข้อมูลผู้สั่งซื้อและการจัดส่ง -->
+        <!-- ข้อมูลผู้สั่งซื้อและการจัดส่ง (ดึงข้อมูลจริงจาก DB) -->
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <div class="flex justify-between items-center mb-4">
             <div class="flex items-center gap-2 font-bold text-gray-900 text-sm">
@@ -86,15 +83,15 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs mb-4">
             <div>
               <span class="text-gray-400 block mb-1">ชื่อผู้รับ</span>
-              <span id="displayUserName" class="font-bold text-gray-800 text-sm">คุณสมชาย ใจดี</span>
+              <span id="displayUserName" class="font-bold text-gray-800 text-sm">กำลังโหลด...</span>
             </div>
             <div>
               <span class="text-gray-400 block mb-1">เบอร์โทรศัพท์</span>
-              <span id="displayUserPhone" class="font-bold text-gray-800 text-sm">081-234-5678</span>
+              <span id="displayUserPhone" class="font-bold text-gray-800 text-sm">กำลังโหลด...</span>
             </div>
             <div>
               <span class="text-gray-400 block mb-1">อีเมลยืนยันคำสั่งซื้อ</span>
-              <span id="displayUserEmail" class="font-medium text-gray-700">somchai@email.com</span>
+              <span id="displayUserEmail" class="font-medium text-gray-700">กำลังโหลด...</span>
             </div>
             <div>
               <span class="text-gray-400 block mb-1">รูปแบบการจัดส่ง</span>
@@ -107,7 +104,7 @@
           <div class="bg-gray-50 rounded-xl p-4 text-xs">
             <span class="font-bold text-gray-700 block mb-1">ที่อยู่จัดส่งพัสดุ:</span>
             <p id="displayUserAddress" class="text-gray-600 leading-relaxed">
-              123/45 ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110
+              กำลังโหลดข้อมูลที่อยู่...
             </p>
             <p class="text-[10px] text-gray-400 mt-2">* หมายเหตุการจัดส่ง: ฝากไว้ที่ป้อมยามคอนโดหากไม่มีคนรับ</p>
           </div>
@@ -213,7 +210,7 @@
     let slipFile = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
-      // ตรวจสอบ Role เพื่อแสดงเมนูเพิ่มเติม ( admin / staff )
+      // ซ่อน/แสดงเมนูตาม Role
       const role = localStorage.getItem('pp_user_role') || 'customer';
       if (role === 'admin') {
         document.getElementById('navProducts')?.classList.remove('hidden');
@@ -231,7 +228,8 @@
         return;
       }
 
-      loadUserInfo();
+      // โหลดข้อมูลผู้ใช้จาก DB และรายการสินค้า
+      await loadUserInfoFromDB(userId);
       await loadCart();
     });
 
@@ -245,27 +243,82 @@
           || null;
     }
 
-    function loadUserInfo() {
-      const name = currentUser.firstName ? `${currentUser.firstName} ${currentUser.lastName}` : (currentUser.name || 'คุณสมชาย ใจดี');
-      const phone = currentUser.phone || '081-234-5678';
-      const email = currentUser.email || 'somchai@email.com';
-      const address = currentUser.address || '123/45 ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110';
+    // ดึงข้อมูลลูกค้ารายบุคคลจาก Database Supabase
+    async function loadUserInfoFromDB(userId) {
+      try {
+        const client = DB.getClient ? DB.getClient() : null;
+        if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
-      document.getElementById('displayUserName').innerText = name;
-      document.getElementById('displayUserPhone').innerText = phone;
-      document.getElementById('displayUserEmail').innerText = email;
-      document.getElementById('displayUserAddress').innerText = address;
-    }
+        // ค้นหาข้อมูลผู้ใช้จากตาราง users หรือ profiles
+        let { data: userData, error } = await client
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
 
-    function editUserInfo() {
-      const newAddr = prompt('แก้ไขที่อยู่จัดส่ง:', document.getElementById('displayUserAddress').innerText);
-      if (newAddr) {
-        currentUser.address = newAddr;
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        document.getElementById('displayUserAddress').innerText = newAddr;
+        // กรณีใช้ตารางชื่อ profiles หรือหาในตาราง users ไม่เจอ
+        if (!userData) {
+          const { data: profileData } = await client
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle();
+          if (profileData) userData = profileData;
+        }
+
+        // จัดการดึงค่าจาก DB หรือข้อมูล fallback
+        const firstName = userData?.first_name || userData?.firstName || currentUser.firstName || currentUser.name || '';
+        const lastName = userData?.last_name || userData?.lastName || currentUser.lastName || '';
+        const fullName = `${firstName} ${lastName}`.trim() || 'ไม่ระบุชื่อ';
+        
+        const phone = userData?.phone || currentUser.phone || 'ไม่ระบุเบอร์โทรศัพท์';
+        const email = userData?.email || currentUser.email || 'ไม่ระบุอีเมล';
+        const address = userData?.address || currentUser.address || 'ยังไม่มีข้อมูลที่อยู่จัดส่ง กรุณากดแก้ไขข้อมูล';
+
+        // แสดงผลขึ้น UI
+        document.getElementById('displayUserName').innerText = fullName;
+        document.getElementById('displayUserPhone').innerText = phone;
+        document.getElementById('displayUserEmail').innerText = email;
+        document.getElementById('displayUserAddress').innerText = address;
+
+        // อัปเดตเก็บใน currentUser
+        currentUser.fullName = fullName;
+        currentUser.phone = phone;
+        currentUser.email = email;
+        currentUser.address = address;
+
+      } catch (err) {
+        console.error('Error fetching user info from DB:', err);
+        // Fallback ใช้ข้อมูลจาก localStorage ชั่วคราวกรณี ดึง DB ขัดข้อง
+        document.getElementById('displayUserName').innerText = currentUser.name || currentUser.username || 'ผู้ใช้งานระบบ';
+        document.getElementById('displayUserPhone').innerText = currentUser.phone || 'ไม่ระบุเบอร์โทรศัพท์';
+        document.getElementById('displayUserEmail').innerText = currentUser.email || 'ไม่ระบุอีเมล';
+        document.getElementById('displayUserAddress').innerText = currentUser.address || 'ไม่ระบุที่อยู่จัดส่ง';
       }
     }
 
+    // แก้ไขที่อยู่พร้อมอัปเดตลง Database
+    async function editUserInfo() {
+      const currentAddress = document.getElementById('displayUserAddress').innerText;
+      const newAddr = prompt('แก้ไขที่อยู่จัดส่งพัสดุของคุณ:', currentAddress);
+      
+      if (newAddr && newAddr.trim() !== '') {
+        document.getElementById('displayUserAddress').innerText = newAddr;
+        currentUser.address = newAddr;
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        // อัปเดตลงฐานข้อมูล
+        const userId = getUserId();
+        try {
+          const client = DB.getClient();
+          await client.from('users').update({ address: newAddr }).eq('id', userId);
+        } catch (e) {
+          console.log('อัปเดตที่อยู่ลง LocalStorage เรียบร้อย');
+        }
+      }
+    }
+
+    // ดึงข้อมูลรายการสินค้าในตะกร้า
     async function loadCart() {
       const cartContainer = document.getElementById('cartList');
       const userId = getUserId();
