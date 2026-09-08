@@ -352,7 +352,6 @@
       const isStaffOrAdmin = role === 'admin' || role === 'staff';
 
       filtered.forEach(p => {
-        const isLowStock = p.stock <= 2;
         const productCode = p.code || `IP-${p.id}`;
         const card = document.createElement('div');
         card.className = 'bg-white rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between relative border border-gray-100';
@@ -389,9 +388,6 @@
           <div>
             <div class="flex items-center justify-between mb-3">
               <span class="text-base font-extrabold text-gray-900">฿${Number(p.price).toLocaleString()}</span>
-              <span class="text-[10px] px-2 py-0.5 rounded ${isLowStock ? 'bg-red-50 text-red-500 font-medium' : 'bg-gray-100 text-gray-500'}">
-                เหลือ ${p.stock} เครื่อง
-              </span>
             </div>
 
             ${!isStaffOrAdmin ? `
