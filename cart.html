@@ -69,7 +69,7 @@
       <!-- ฝั่งซ้าย: ข้อมูลผู้สั่งซื้อ + รายการสินค้า -->
       <div class="lg:col-span-2 space-y-6">
         
-        <!-- ข้อมูลผู้สั่งซื้อและการจัดส่ง (ดึงข้อมูลจริงจาก DB) -->
+        <!-- ข้อมูลผู้สั่งซื้อและการจัดส่ง -->
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <div class="flex justify-between items-center mb-4">
             <div class="flex items-center gap-2 font-bold text-gray-900 text-sm">
@@ -209,7 +209,6 @@
     let slipFile = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
-      // ซ่อน/แสดงเมนูตาม Role
       const role = localStorage.getItem('pp_user_role') || 'customer';
       if (role === 'admin') {
         document.getElementById('navProducts')?.classList.remove('hidden');
@@ -227,7 +226,6 @@
         return;
       }
 
-      // โหลดข้อมูลผู้ใช้จาก DB และรายการสินค้า
       await loadUserInfoFromDB(userId);
       await loadCart();
     });
@@ -242,20 +240,17 @@
           || null;
     }
 
-    // ดึงข้อมูลลูกค้ารายบุคคลจาก Database Supabase
     async function loadUserInfoFromDB(userId) {
       try {
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
-        // ค้นหาข้อมูลผู้ใช้จากตาราง users หรือ profiles
         let { data: userData, error } = await client
           .from('users')
           .select('*')
           .eq('id', userId)
           .maybeSingle();
 
-        // กรณีใช้ตารางชื่อ profiles หรือหาในตาราง users ไม่เจอ
         if (!userData) {
           const { data: profileData } = await client
             .from('profiles')
@@ -265,7 +260,6 @@
           if (profileData) userData = profileData;
         }
 
-        // จัดการดึงค่าจาก DB หรือข้อมูล fallback
         const firstName = userData?.first_name || userData?.firstName || currentUser.firstName || currentUser.name || '';
         const lastName = userData?.last_name || userData?.lastName || currentUser.lastName || '';
         const fullName = `${firstName} ${lastName}`.trim() || 'ไม่ระบุชื่อ';
@@ -274,13 +268,11 @@
         const email = userData?.email || currentUser.email || 'ไม่ระบุอีเมล';
         const address = userData?.address || currentUser.address || 'ยังไม่มีข้อมูลที่อยู่จัดส่ง กรุณากดแก้ไขข้อมูล';
 
-        // แสดงผลขึ้น UI
         document.getElementById('displayUserName').innerText = fullName;
         document.getElementById('displayUserPhone').innerText = phone;
         document.getElementById('displayUserEmail').innerText = email;
         document.getElementById('displayUserAddress').innerText = address;
 
-        // อัปเดตเก็บใน currentUser
         currentUser.fullName = fullName;
         currentUser.phone = phone;
         currentUser.email = email;
@@ -288,7 +280,6 @@
 
       } catch (err) {
         console.error('Error fetching user info from DB:', err);
-        // Fallback ใช้ข้อมูลจาก localStorage ชั่วคราวกรณี ดึง DB ขัดข้อง
         document.getElementById('displayUserName').innerText = currentUser.name || currentUser.username || 'ผู้ใช้งานระบบ';
         document.getElementById('displayUserPhone').innerText = currentUser.phone || 'ไม่ระบุเบอร์โทรศัพท์';
         document.getElementById('displayUserEmail').innerText = currentUser.email || 'ไม่ระบุอีเมล';
@@ -296,7 +287,6 @@
       }
     }
 
-    // แก้ไขที่อยู่พร้อมอัปเดตลง Database
     async function editUserInfo() {
       const currentAddress = document.getElementById('displayUserAddress').innerText;
       const newAddr = prompt('แก้ไขที่อยู่จัดส่งพัสดุของคุณ:', currentAddress);
@@ -306,7 +296,6 @@
         currentUser.address = newAddr;
         localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
-        // อัปเดตลงฐานข้อมูล
         const userId = getUserId();
         try {
           const client = DB.getClient();
@@ -317,7 +306,6 @@
       }
     }
 
-    // ดึงข้อมูลรายการสินค้าในตะกร้า
     async function loadCart() {
       const cartContainer = document.getElementById('cartList');
       const userId = getUserId();
@@ -494,22 +482,47 @@
 
       if (!confirm('ยืนยันการชำระเงินและสั่งซื้อสินค้า?')) return;
 
+      const checkoutBtn = document.getElementById('checkoutBtn');
+      checkoutBtn.disabled = true;
+      checkoutBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> กำลังดำเนินการสั่งซื้อ...`;
+
       try {
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
+        // 1. อัปโหลดไฟล์สลิปไปที่ Supabase Storage Bucket "slips"
+        const fileExt = slipFile.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+        const filePath = `${userId}/${fileName}`;
+
+        const { data: uploadData, error: uploadError } = await client
+          .storage
+          .from('slips')
+          .upload(filePath, slipFile);
+
+        if (uploadError) throw new Error('อัปโหลดสลิปไม่สำเร็จ: ' + uploadError.message);
+
+        // ดึง Public URL ของสลิปที่อัปโหลด
+        const { data: urlData } = client.storage.from('slips').getPublicUrl(filePath);
+        const slipUrl = urlData ? urlData.publicUrl : filePath;
+
         const grandTotal = cartItems.reduce((sum, item) => sum + (Number(item.price || 0) * item.quantity), 0);
         const userAddress = document.getElementById('displayUserAddress').innerText;
         const userPhone = document.getElementById('displayUserPhone').innerText;
+        const customerName = document.getElementById('displayUserName').innerText;
 
+        // 2. บันทึกคำสั่งซื้อลงตาราง orders พร้อมแนบ slip_url
         const { data: orderData, error: orderError } = await client
           .from('orders')
           .insert([{
             user_id: userId,
+            customer_name: customerName,
             total_amount: grandTotal,
             status: 'pending',
             shipping_address: userAddress,
-            phone: userPhone
+            address: userAddress,
+            phone: userPhone,
+            slip_url: slipUrl // บันทึก URL สลิป
           }])
           .select();
 
@@ -517,6 +530,7 @@
 
         const newOrderId = orderData[0].id;
 
+        // 3. บันทึกรายการสินค้าในคำสั่งซื้อ (order_items)
         const orderItemsPayload = cartItems.map(item => ({
           order_id: newOrderId,
           product_id: item.product_id,
@@ -530,6 +544,7 @@
 
         if (itemsError) throw itemsError;
 
+        // 4. ลบสินค้าออกจากตะกร้า
         const { error: clearError } = await client
           .from('cart')
           .delete()
@@ -543,6 +558,8 @@
       } catch (err) {
         console.error('Checkout error:', err);
         alert('เกิดข้อผิดพลาดในการสั่งซื้อ: ' + err.message);
+        checkoutBtn.disabled = false;
+        checkoutBtn.innerHTML = `<i class="fa-solid fa-lock"></i> ยืนยันการชำระเงิน <i class="fa-solid fa-arrow-right"></i>`;
       }
     }
 
