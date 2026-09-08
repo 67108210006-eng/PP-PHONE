@@ -429,7 +429,7 @@
         }
 
         orderCard.innerHTML = `
-          <!-- Header (มีชื่อลูกค้าเพิ่มเข้ามาเรียบร้อยแล้ว) -->
+          <!-- Header -->
           <div class="p-5 flex flex-wrap items-center justify-between gap-4 cursor-pointer hover:bg-gray-50/80 transition" onclick="toggleOrderDetail('${order.id}')">
             <div class="flex items-center gap-4 md:gap-6 flex-wrap">
               <div>
@@ -493,10 +493,9 @@
                 </div>
                 <div class="text-[11px] text-gray-600 pt-2 border-t border-gray-100">
                   <span class="text-gray-400 block text-[10px]">ที่อยู่จัดส่ง</span>
-                  <!-- แสดงที่อยู่อ่านอย่างเดียว -->
                   <p id="addressText-${order.id}" class="mt-0.5 leading-relaxed font-medium text-gray-800">${customerAddress}</p>
                   
-                  <!-- ฟอร์มแก้ไขที่อยู่ (ซ่อนอยู่เริ่มต้น) -->
+                  <!-- ฟอร์มแก้ไขที่อยู่ -->
                   <div id="addressEditBox-${order.id}" class="hidden mt-2">
                     <textarea id="addressInput-${order.id}" rows="3" class="w-full p-2 text-xs border border-gray-300 rounded-xl focus:outline-none focus:border-[#8a6e11] bg-white">${customerAddress}</textarea>
                     <div class="flex gap-2 mt-2 justify-end">
@@ -551,17 +550,11 @@
 
     function toggleOrderDetail(orderId) {
       const detailEl = document.getElementById(`detail-${orderId}`);
-
       if (detailEl) {
-        if (detailEl.classList.contains('hidden')) {
-          detailEl.classList.remove('hidden');
-        } else {
-          detailEl.classList.add('hidden');
-        }
+        detailEl.classList.toggle('hidden');
       }
     }
 
-    /* ฟังก์ชันเปิด/ปิดกล่องแก้ไขที่อยู่ */
     function editAddress(orderId) {
       const textEl = document.getElementById(`addressText-${orderId}`);
       const editBox = document.getElementById(`addressEditBox-${orderId}`);
@@ -578,7 +571,6 @@
       }
     }
 
-    /* ฟังก์ชันบันทึกการแก้ไขที่อยู่ลง Supabase */
     async function saveAddress(orderId) {
       const newAddress = document.getElementById(`addressInput-${orderId}`).value.trim();
       
@@ -589,8 +581,6 @@
 
       try {
         const client = DB.getClient();
-        
-        // อัปเดตทั้ง address และ shipping_address เพื่อรองรับชื่อคอลัมน์ใน DB
         const { error } = await client
           .from('orders')
           .update({ 
@@ -602,10 +592,32 @@
         if (error) throw error;
 
         alert('แก้ไขที่อยู่สำเร็จเรียบร้อย');
-        await loadOrderHistory(); // โหลดข้อมูลเพื่ออัปเดตหน้าจอ
+        await loadOrderHistory();
       } catch (err) {
         console.error('Error updating address:', err);
         alert('เกิดข้อผิดพลาดในการบันทึกที่อยู่: ' + err.message);
+      }
+    }
+
+    async function updateOrderStatus(orderId, newStatus) {
+      if (!confirm(`คุณต้องการเปลี่ยนสถานะออเดอร์นี้เป็น "${newStatus === 'approved' ? 'อนุมัติ' : 'ยกเลิก'}" ใช่หรือไม่?`)) {
+        return;
+      }
+
+      try {
+        const client = DB.getClient();
+        const { error } = await client
+          .from('orders')
+          .update({ status: newStatus })
+          .eq('id', orderId);
+
+        if (error) throw error;
+
+        alert('อัปเดตสถานะสำเร็จ');
+        await loadOrderHistory();
+      } catch (err) {
+        console.error('Error updating order status:', err);
+        alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ: ' + err.message);
       }
     }
 
@@ -713,49 +725,20 @@
       setStatusFilter('all');
     }
 
-    async function updateOrderStatus(orderId, newStatus) {
-      if (!confirm(`คุณต้องการเปลี่ยนสถานะคำสั่งซื้อเป็น ${newStatus === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ/ยกเลิก'} ใช่หรือไม่?`)) {
-        return;
-      }
-
-      try {
-        const client = DB.getClient();
-        const { error } = await client
-          .from('orders')
-          .update({ status: newStatus })
-          .eq('id', orderId);
-
-        if (error) throw error;
-
-        alert('อัปเดตสถานะเรียบร้อยแล้ว');
-        await loadOrderHistory();
-      } catch (err) {
-        console.error('Error updating order:', err);
-        alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ: ' + err.message);
-      }
-    }
-
     async function updateCartBadge() {
-      const userId = getUserId();
-      const cartCountEl = document.getElementById('cartCount');
-      if (!userId || !cartCountEl) return;
-
       try {
-        const client = DB.getClient();
-        const { data, error } = await client.from('cart').select('quantity').eq('user_id', userId);
-        if (error) throw error;
-
-        const totalItems = (data || []).reduce((sum, item) => sum + (item.quantity || 1), 0);
-        cartCountEl.innerText = totalItems;
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const count = cart.reduce((total, item) => total + (item.quantity || 1), 0);
+        const badge = document.getElementById('cartCount');
+        if (badge) badge.innerText = count;
       } catch (e) {
-        console.warn('ไม่สามารถโหลดจำนวนสินค้าในตะกร้าได้:', e);
+        console.warn('Error updating cart count:', e);
       }
     }
 
     function logout() {
-      if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
+      if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
         localStorage.removeItem('currentUser');
-        localStorage.removeItem('userSession');
         localStorage.removeItem('pp_user_role');
         window.location.href = 'login.html';
       }
