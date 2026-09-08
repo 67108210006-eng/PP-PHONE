@@ -64,39 +64,24 @@
       <p class="text-xs text-gray-400 mt-1">ดูประวัติและสถานะการสั่งซื้อทั้งหมด</p>
     </div>
 
-    <!-- Filter Bar & Search Container -->
-    <div class="bg-white/80 backdrop-blur-sm p-3 rounded-2xl border border-gray-100 flex flex-wrap items-center justify-between gap-4 mb-6 shadow-sm">
-      
-      <!-- Status Tabs -->
-      <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-        <button onclick="setStatusFilter('all')" id="btnFilterAll" class="px-4 py-1.5 rounded-xl text-xs font-bold transition bg-[#8a6e11] text-white shadow-sm">
-          ทั้งหมด
-        </button>
-        <button onclick="setStatusFilter('pending')" id="btnFilterPending" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-amber-500"></span> รอตรวจสอบ
-        </button>
-        <button onclick="setStatusFilter('approved')" id="btnFilterApproved" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span> อนุมัติแล้ว
-        </button>
-        <button onclick="setStatusFilter('cancelled')" id="btnFilterCancelled" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-red-500"></span> ยกเลิก
-        </button>
-      </div>
-
-      <!-- Search & Date Filter -->
-      <div class="flex items-center gap-3 flex-1 max-w-md w-full">
-        <div class="relative flex-1">
-          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-          <input type="text" id="searchInput" onkeyup="filterOrders()" placeholder="ค้นหารหัสคำสั่งซื้อ, ชื่อลูกค้า, เบอร์โทร..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-[#8a6e11] transition">
-        </div>
-        <div class="relative">
-          <input type="date" id="dateInput" onchange="filterOrders()" class="bg-gray-50 border border-gray-200 text-xs text-gray-600 py-2 px-3 rounded-xl focus:bg-white focus:outline-none focus:border-[#8a6e11] transition">
-        </div>
-      </div>
+    <!-- Filter Bar (เฉพาะแท็บสถานะ) -->
+    <div class="bg-white/80 backdrop-blur-sm p-3 rounded-2xl border border-gray-100 flex items-center justify-start gap-2 mb-6 shadow-sm overflow-x-auto">
+      <button onclick="setStatusFilter('all')" id="btnFilterAll" class="px-4 py-1.5 rounded-xl text-xs font-bold transition bg-[#8a6e11] text-white shadow-sm whitespace-nowrap">
+        ทั้งหมด
+      </button>
+      <button onclick="setStatusFilter('pending')" id="btnFilterPending" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5 whitespace-nowrap">
+        <span class="w-2 h-2 rounded-full bg-amber-500"></span> รอตรวจสอบ
+      </button>
+      <button onclick="setStatusFilter('approved')" id="btnFilterApproved" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5 whitespace-nowrap">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> อนุมัติแล้ว
+      </button>
+      <button onclick="setStatusFilter('cancelled')" id="btnFilterCancelled" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5 whitespace-nowrap">
+        <span class="w-2 h-2 rounded-full bg-red-500"></span> ยกเลิก
+      </button>
     </div>
 
     <!-- Orders List Container -->
-    <div id="orderList" class="space-y-6">
+    <div id="orderList" class="space-y-4">
       <div class="bg-white rounded-2xl p-12 text-center text-gray-400 font-light shadow-sm">
         กำลังโหลดประวัติการสั่งซื้อ...
       </div>
@@ -205,11 +190,9 @@
           || null;
     }
 
-    // ฟังก์ชันดึง URL รูปสลิปแบบครอบคลุม
     function extractSlipUrl(order) {
       if (!order) return null;
 
-      // ค้นหาคีย์ชื่อที่เกี่ยวข้องกับรูปสลิปทุกรูปแบบ
       const possibleKeys = [
         'slip_url', 'slip_image', 'payment_slip', 'slip', 
         'slip_path', 'image_url', 'proof_of_payment', 'receipt_url', 'slip_img'
@@ -219,12 +202,10 @@
         if (order[key] && typeof order[key] === 'string' && order[key].trim() !== '') {
           let url = order[key].trim();
 
-          // กรณีเป็น URL เต็ม (http://, https://) หรือ Base64
           if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image/')) {
             return url;
           }
 
-          // กรณีเป็น Path ใน Supabase Storage
           if (typeof DB !== 'undefined' && DB.getClient) {
             try {
               const client = DB.getClient();
@@ -271,7 +252,6 @@
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
-        // 1. ดึงคำสั่งซื้อทั้งหมด
         let query = client.from('orders').select('*').order('created_at', { ascending: false });
 
         if (!isAdminOrStaff) {
@@ -287,7 +267,6 @@
           return;
         }
 
-        // 2. ดึงข้อมูลผู้ใช้เสริม
         const userIds = [...new Set(orders.map(o => o.user_id).filter(Boolean))];
         let usersMap = {};
 
@@ -302,7 +281,6 @@
           }
         }
 
-        // 3. ดึง order_items
         const orderIds = orders.map(o => o.id);
         let itemsMap = {};
 
@@ -320,7 +298,6 @@
           }
         }
 
-        // 4. ประกอบข้อมูลออเดอร์พร้อมสลิป
         allOrders = orders.map(order => {
           const u = usersMap[order.user_id] || {};
           const slipImage = extractSlipUrl(order);
@@ -372,7 +349,7 @@
         const status = order.status || 'pending';
 
         const orderCard = document.createElement('div');
-        orderCard.className = 'bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden';
+        orderCard.className = 'bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition duration-200';
 
         let itemsHtml = '';
         (order.order_items || []).forEach(item => {
@@ -401,7 +378,6 @@
           `;
         });
 
-        // แสดงผลรูปสลิป (แก้ไขแท็ก img ให้สะอาดเรียบร้อย)
         let slipHtml = '';
         if (order.slip_url) {
           slipHtml = `
@@ -426,8 +402,9 @@
         }
 
         orderCard.innerHTML = `
-          <div class="p-5 flex flex-wrap items-center justify-between gap-4 border-b border-gray-50">
-            <div class="flex items-center gap-6">
+          <!-- Header (ส่วนที่มองเห็นเสมอ และกดเพื่อ เปิด/ปิด รายละเอียด) -->
+          <div class="p-5 flex flex-wrap items-center justify-between gap-4 cursor-pointer hover:bg-gray-50/80 transition" onclick="toggleOrderDetail('${order.id}')">
+            <div class="flex items-center gap-4 md:gap-6 flex-wrap">
               <div>
                 <span class="text-[10px] text-gray-400 block font-medium">รหัสคำสั่งซื้อ</span>
                 <span class="text-sm font-bold text-gray-900">ORD-${order.id}</span>
@@ -437,18 +414,24 @@
                 <span class="text-xs font-semibold text-gray-600">${orderDate}</span>
               </div>
               <div>
-                <span class="text-[10px] text-gray-400 block font-medium">สถานะคำสั่งซื้อ</span>
+                <span class="text-[10px] text-gray-400 block font-medium">สถานะ</span>
                 ${getStatusBadge(status)}
               </div>
             </div>
 
-            <div class="text-right">
-              <span class="text-[10px] text-gray-400 block font-medium">ยอดชำระสุทธิ</span>
-              <span class="text-xl font-black text-[#8a6e11]">฿${Number(order.total_amount || 0).toLocaleString()}</span>
+            <div class="flex items-center gap-4 ml-auto">
+              <div class="text-right">
+                <span class="text-[10px] text-gray-400 block font-medium">ยอดชำระสุทธิ</span>
+                <span class="text-lg md:text-xl font-black text-[#8a6e11]">฿${Number(order.total_amount || 0).toLocaleString()}</span>
+              </div>
+              <button class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-[#8a6e11] hover:text-white transition">
+                <i id="icon-detail-${order.id}" class="fa-solid fa-chevron-down text-xs transition-transform duration-300"></i>
+              </button>
             </div>
           </div>
 
-          <div class="p-5 grid grid-cols-1 md:grid-cols-12 gap-6 bg-white">
+          <!-- Body (ซ่อนซ่อนไว้เป็นค่าเริ่มต้น จะแสดงเมื่อเลือกคลิกที่ออเดอร์) -->
+          <div id="detail-${order.id}" class="hidden p-5 border-t border-gray-100 bg-white grid grid-cols-1 md:grid-cols-12 gap-6">
             <div class="md:col-span-7 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
               <div>
                 <div class="flex items-center gap-2 mb-3">
@@ -517,6 +500,22 @@
       });
     }
 
+    // ฟังก์ชันสำหรับเปิด-ปิด รายละเอียดคำสั่งซื้อ
+    function toggleOrderDetail(orderId) {
+      const detailEl = document.getElementById(`detail-${orderId}`);
+      const iconEl = document.getElementById(`icon-detail-${orderId}`);
+
+      if (detailEl) {
+        if (detailEl.classList.contains('hidden')) {
+          detailEl.classList.remove('hidden');
+          if (iconEl) iconEl.classList.add('rotate-180');
+        } else {
+          detailEl.classList.add('hidden');
+          if (iconEl) iconEl.classList.remove('rotate-180');
+        }
+      }
+    }
+
     function getStatusBadge(status) {
       if (status === 'approved' || status === 'completed') {
         return `<span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-200/60">
@@ -561,9 +560,9 @@
       Object.keys(buttons).forEach(key => {
         if (buttons[key]) {
           if (key === status) {
-            buttons[key].className = 'px-4 py-1.5 rounded-xl text-xs font-bold transition bg-[#8a6e11] text-white shadow-sm';
+            buttons[key].className = 'px-4 py-1.5 rounded-xl text-xs font-bold transition bg-[#8a6e11] text-white shadow-sm whitespace-nowrap';
           } else {
-            buttons[key].className = 'px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5';
+            buttons[key].className = 'px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5 whitespace-nowrap';
           }
         }
       });
@@ -572,30 +571,7 @@
     }
 
     function filterOrders() {
-      const search = document.getElementById('searchInput').value.toLowerCase().trim();
-      const selectedDate = document.getElementById('dateInput').value;
-
       const filtered = allOrders.filter(order => {
-        const profile = order.profiles || {};
-        const customerName = (profile.full_name || '').toLowerCase();
-        const customerPhone = (profile.phone || '').toLowerCase();
-        const customerAddress = (profile.address || '').toLowerCase();
-        const orderIdStr = String(order.id).toLowerCase();
-        const userIdStr = String(order.user_id || '').toLowerCase();
-
-        const matchesSearch = 
-          orderIdStr.includes(search) ||
-          userIdStr.includes(search) ||
-          customerName.includes(search) ||
-          customerPhone.includes(search) ||
-          customerAddress.includes(search);
-
-        let matchesDate = true;
-        if (selectedDate) {
-          const orderDateStr = new Date(order.created_at).toISOString().split('T')[0];
-          matchesDate = (orderDateStr === selectedDate);
-        }
-
         let matchesStatus = true;
         if (currentStatusFilter === 'pending') {
           matchesStatus = (order.status === 'pending' || order.status === 'paid');
@@ -605,7 +581,7 @@
           matchesStatus = (order.status === 'cancelled' || order.status === 'rejected');
         }
 
-        return matchesSearch && matchesDate && matchesStatus;
+        return matchesStatus;
       });
 
       renderOrders(filtered);
