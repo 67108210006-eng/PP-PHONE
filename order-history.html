@@ -264,7 +264,7 @@
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
-        // แก้ไข: นำ image ออกจาก products(...) ด้านล่างเพื่อป้องกัน Column Not Exist
+        // แก้ไข: เอาคอลัมน์ color ออกจาก order_items เพื่อป้องกันข้อผิดพลาด
         let query = client
           .from('orders')
           .select(`
@@ -273,7 +273,6 @@
               id,
               quantity,
               price,
-              color,
               products (
                 id,
                 name,
