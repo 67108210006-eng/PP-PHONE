@@ -251,7 +251,7 @@
     function extractProductImageUrl(product) {
       if (!product) return 'https://via.placeholder.com/150?text=No+Image';
       
-      const imgKey = product.image_url || product.img || product.product_image;
+      const imgKey = product.image_url || product.img || product.product_image || product.image;
       if (!imgKey || typeof imgKey !== 'string' || imgKey.trim() === '') {
         return 'https://via.placeholder.com/150?text=No+Image';
       }
@@ -331,7 +331,7 @@
 
           return {
             ...order,
-            order_items: itemsMap[order.id] || [],
+            order_items: itemsMap[order.id] || order.order_items || order.items || [],
             slip_url: slipImage,
             profiles: {
               full_name: order.customer_name || u.full_name || u.name || u.username || 'ลูกค้าทั่วไป',
@@ -380,7 +380,7 @@
 
         let itemsHtml = '';
         (order.order_items || []).forEach(item => {
-          const product = item.products || {};
+          const product = item.products || item || {};
           const productImgUrl = extractProductImageUrl(product);
           const colorInfo = item.color ? `สี: ${item.color} | ` : '';
 
@@ -393,8 +393,8 @@
                        class="object-contain h-full w-full rounded">
                 </div>
                 <div>
-                  <h4 class="font-bold text-gray-900 text-xs">${product.name || item.product_name || 'สินค้า'}</h4>
-                  <p class="text-[10px] text-gray-400 mt-0.5">${colorInfo}SKU: ${product.code || product.id || '-'}</p>
+                  <h4 class="font-bold text-gray-900 text-xs">${product.name || item.name || item.product_name || 'สินค้า'}</h4>
+                  <p class="text-[10px] text-gray-400 mt-0.5">${colorInfo}SKU: ${product.code || product.sku || product.id || '-'}</p>
                   <p class="text-[10px] text-[#8a6e11] font-semibold mt-0.5">จำนวน ${item.quantity || 1} เครื่อง × ฿${Number(item.price || 0).toLocaleString()}</p>
                 </div>
               </div>
@@ -453,7 +453,7 @@
             <div class="flex items-center gap-4 ml-auto">
               <div class="text-right">
                 <span class="text-[10px] text-gray-400 block font-medium">ยอดชำระสุทธิ</span>
-                <span class="text-lg md:text-xl font-black text-[#8a6e11]">฿${Number(order.total_amount || 0).toLocaleString()}</span>
+                <span class="text-lg md:text-xl font-black text-[#8a6e11]">฿${Number(order.total_amount || order.total_price || 0).toLocaleString()}</span>
               </div>
             </div>
           </div>
@@ -527,7 +527,7 @@
                 ${slipHtml}
               </div>
 
-              ${isAdminOrStaff && (status === 'pending' || status === 'paid') ? `
+              ${isAdminOrStaff && (status === 'pending' || status === 'paid' || status === 'รอตรวจสอบ') ? `
                 <div class="mt-4 pt-3 border-t border-gray-100">
                   <span class="text-[10px] font-bold text-gray-500 block mb-2">การอนุมัติคำสั่งซื้อ (เจ้าหน้าที่)</span>
                   <div class="grid grid-cols-2 gap-2">
@@ -622,11 +622,13 @@
     }
 
     function getStatusBadge(status) {
-      if (status === 'approved' || status === 'completed') {
+      const st = String(status || '').toLowerCase().trim();
+
+      if (['approved', 'completed', 'paid', 'อนุมัติแล้ว', 'สำเร็จ'].includes(st)) {
         return `<span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-200/60">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> ชำระแล้ว (อนุมัติเรียบร้อย)
         </span>`;
-      } else if (status === 'cancelled' || status === 'rejected') {
+      } else if (['cancelled', 'rejected', 'ยกเลิก', 'ปฏิเสธ'].includes(st)) {
         return `<span class="inline-flex items-center gap-1.5 bg-red-50 text-red-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-red-200/60">
           <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> ยกเลิกคำสั่งซื้อ
         </span>`;
@@ -681,13 +683,15 @@
       const endDateVal = document.getElementById('endDate').value;
 
       const filtered = allOrders.filter(order => {
+        const st = String(order.status || '').toLowerCase().trim();
+
         let matchesStatus = true;
         if (currentStatusFilter === 'pending') {
-          matchesStatus = (order.status === 'pending' || order.status === 'paid');
+          matchesStatus = (st === 'pending' || st === 'paid' || st === 'รอตรวจสอบ' || st === '');
         } else if (currentStatusFilter === 'approved') {
-          matchesStatus = (order.status === 'approved' || order.status === 'completed');
+          matchesStatus = (st === 'approved' || st === 'completed' || st === 'อนุมัติแล้ว');
         } else if (currentStatusFilter === 'cancelled') {
-          matchesStatus = (order.status === 'cancelled' || order.status === 'rejected');
+          matchesStatus = (st === 'cancelled' || st === 'rejected' || st === 'ยกเลิก');
         }
 
         let matchesSearch = true;
@@ -705,7 +709,7 @@
             start.setHours(0, 0, 0, 0);
             if (orderDate < start) matchesDate = false;
           }
-          if (endDateVal) {
+          if (endDateVal && matchesDate) {
             const end = new Date(endDateVal);
             end.setHours(23, 59, 59, 999);
             if (orderDate > end) matchesDate = false;
@@ -739,6 +743,7 @@
     function logout() {
       if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
         localStorage.removeItem('currentUser');
+        localStorage.removeItem('userSession');
         localStorage.removeItem('pp_user_role');
         window.location.href = 'login.html';
       }
