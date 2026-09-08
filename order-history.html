@@ -224,11 +224,10 @@
             return url;
           }
 
-          // กรณีเป็น Path ใน Supabase Storage (ค้นหาทั้งบัคเก็ต slips และ payments)
+          // กรณีเป็น Path ใน Supabase Storage
           if (typeof DB !== 'undefined' && DB.getClient) {
             try {
               const client = DB.getClient();
-              // ลองดึงจาก bucket 'slips'
               const { data: slipData } = client.storage.from('slips').getPublicUrl(url);
               if (slipData && slipData.publicUrl) return slipData.publicUrl;
             } catch (e) {
@@ -334,7 +333,7 @@
               full_name: order.customer_name || u.full_name || u.name || u.username || 'ลูกค้าทั่วไป',
               phone: order.phone || u.phone || u.tel || '-',
               email: order.email || u.email || '-',
-              address: order.address || u.address || 'ไม่ระบุที่อยู่จัดส่ง'
+              address: order.address || order.shipping_address || u.address || 'ไม่ระบุที่อยู่จัดส่ง'
             }
           };
         });
@@ -402,13 +401,13 @@
           `;
         });
 
-        // แสดงผลรูปสลิป
+        // แสดงผลรูปสลิป (แก้ไขแท็ก img ให้สะอาดเรียบร้อย)
         let slipHtml = '';
         if (order.slip_url) {
           slipHtml = `
             <div class="relative group cursor-pointer border border-gray-200 rounded-xl overflow-hidden bg-gray-900 flex items-center justify-center h-52 shadow-inner" onclick="openImageModal('${order.slip_url}')">
               <img src="${order.slip_url}" 
-                   onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\"text-center p-4 text-red-400 text-xs\"><i class=\"fa-solid fa-triangle-exclamation text-xl mb-1 block\"></i>ไม่สามารถโหลดรูปสลิปได้</div>';" 
+                   onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'text-center p-4 text-red-400 text-xs\'><i class=\'fa-solid fa-triangle-exclamation text-xl mb-1 block\'></i>ไม่สามารถโหลดรูปสลิปได้</div>';" 
                    class="w-full h-full object-contain group-hover:scale-105 transition duration-300">
               <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white text-xs font-bold gap-2 backdrop-blur-[1px]">
                 <i class="fa-solid fa-magnifying-glass-plus text-xl"></i>
