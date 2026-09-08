@@ -247,13 +247,38 @@
         console.error('Error fetching data from Supabase:', err);
       }
 
-      // fallback จาก LocalStorage หากเชื่อมต่อฐานข้อมูลไม่ได้
+      // Fallback จาก LocalStorage หากเชื่อมต่อ Supabase ไม่สำเร็จหรือข้อมูลว่าง
       if (!orders || orders.length === 0) {
         const localOrders = JSON.parse(localStorage.getItem('pp_orders') || localStorage.getItem('orders') || '[]');
         if (localOrders.length > 0) orders = localOrders;
       }
 
-      renderReport(orders, orderItems, productsList);
+      // 🔍 กรองคำสั่งซื้อที่ "อนุมัติแล้ว/ชำระเงินแล้ว/สำเร็จ" (หรือสั่งซื้อเสร็จสิ้น)
+      const approvedOrders = orders.filter(order => {
+        const status = String(
+          order.status || 
+          order.order_status || 
+          order.payment_status || 
+          ''
+        ).toLowerCase().trim();
+
+        // ถ้าระบบไม่ได้กำหนด status มา ให้ถือว่านับรวมไว้ก่อน
+        if (!status) return true;
+
+        // คำที่หมายถึงอนุมัติหรือสำเร็จแล้ว
+        const isApproved = [
+          'approved', 'paid', 'completed', 'success', 'delivered', 'shipped',
+          'อนุมัติแล้ว', 'อนุมัติ', 'ชำระเงินแล้ว', 'สำเร็จ', 'จัดส่งแล้ว'
+        ].includes(status);
+
+        // คำที่หมายถึงรายการถูกยกเลิก
+        const isCancelled = ['cancelled', 'cancel', 'rejected', 'ยกเลิก', 'ปฏิเสธ'].includes(status);
+
+        // คืนค่า true หากเป็นรายการอนุมัติแล้ว หรือไม่ใช่รายการยกเลิก
+        return isApproved || !isCancelled;
+      });
+
+      renderReport(approvedOrders, orderItems, productsList);
     }
 
     function renderReport(orders, orderItems = [], productsList = []) {
@@ -264,20 +289,29 @@
         if (p.code) productDbMap[p.code.trim()] = p;
       });
 
+      // รวบรวม Order ID ทั้งหมดที่อนุมัติแล้ว
+      const approvedOrderIds = new Set(orders.map(o => String(o.id || o.order_id)));
+
+      // กรองเฉพาะ order_items ที่ผูกกับออเดอร์ที่อนุมัติแล้ว
+      const validOrderItems = orderItems.filter(item => {
+        if (!item.order_id) return true; 
+        return approvedOrderIds.has(String(item.order_id));
+      });
+
       const productSalesMap = {};
       let iphoneSoldTotal = 0;
       let accessorySoldTotal = 0;
 
-      // Helper ฟังก์ชันตรวจแยกประเภท
+      // Helper ตรวจสอบหมวดหมู่ iPhone
       const isIphoneCategory = (cat = '', name = '') => {
         const c = String(cat).toLowerCase();
         const n = String(name).toLowerCase();
         return c.includes('iphone') || c.includes('phone') || c.includes('มือถือ') || n.includes('iphone') || n.includes('16pm') || n.includes('15pm');
       };
 
-      // 1. ดึงข้อมูลสินค้าจาก order_items
-      if (orderItems && orderItems.length > 0) {
-        orderItems.forEach(item => {
+      // 1. ประมวลผลสินค้าจากตาราง order_items
+      if (validOrderItems && validOrderItems.length > 0) {
+        validOrderItems.forEach(item => {
           const pId = String(item.product_id || item.id || '');
           const pDb = productDbMap[pId] || productDbMap[item.name] || productDbMap[item.product_name] || {};
 
@@ -315,7 +349,7 @@
         });
       }
 
-      // 2. ถ้า order_items ใน Supabase ไม่มี ให้ใช้อาร์เรย์ย่อยจากตาราง orders
+      // 2. ถ้า order_items ไม่มีข้อมูล ให้ถอยกลับมาอ่าน JSON items จากคอลัมน์ของตาราง orders
       if (Object.keys(productSalesMap).length === 0 && orders.length > 0) {
         orders.forEach(order => {
           let items = order.items || order.order_items || order.cart || order.products || [];
@@ -365,7 +399,7 @@
         });
       }
 
-      // คำนวณยอดขายรวม
+      // คำนวณยอดขายรวมสุทธิ
       let totalRevenue = 0;
       orders.forEach(order => {
         totalRevenue += Number(order.total_amount || order.total_price || order.total || order.grand_total || order.price || 0);
@@ -377,16 +411,15 @@
         });
       }
 
-      // จำนวนขายรวมทั้งหมด (iPhone + Accessory)
       const totalItemsSold = iphoneSoldTotal + accessorySoldTotal;
 
-      // แสดงผล KPI ทั้ง 4 ช่อง
+      // แสดงผลตัวเลขลง Card KPI ทั้ง 4 ช่อง
       document.getElementById('statTotalRevenue').innerText = `฿${totalRevenue.toLocaleString()}`;
       document.getElementById('statTotalItemsSold').innerText = totalItemsSold.toLocaleString();
       document.getElementById('statIphoneSold').innerText = iphoneSoldTotal.toLocaleString();
       document.getElementById('statAccessorySold').innerText = accessorySoldTotal.toLocaleString();
 
-      // จัดเรียงสินค้าขายดี
+      // จัดอันดับสินค้าขายดี (Best Sellers)
       let topSellers = Object.values(productSalesMap).sort((a, b) => b.soldCount - a.soldCount);
 
       const listContainer = document.getElementById('topSellersList');
@@ -401,7 +434,7 @@
         return;
       }
 
-      // Render รายการสินค้าขายดี
+      // Render รายการอันดับสินค้าขายดี
       topSellers.forEach(item => {
         const itemRow = document.createElement('div');
         itemRow.className = 'flex items-center justify-between p-3 sm:p-4 border border-gray-100 rounded-xl hover:bg-gray-50/80 transition';
