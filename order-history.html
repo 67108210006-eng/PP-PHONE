@@ -190,7 +190,7 @@
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
-        // ดึงข้อมูลรายการสั่งซื้อพร้อมข้อมูลลูกค้าจากฐานข้อมูล
+        // Query ดึงคำสั่งซื้อโดยระบุคอลัมน์มาตรฐานที่มีจริงในตาราง orders
         let query = client
           .from('orders')
           .select(`
@@ -199,10 +199,6 @@
             total_amount,
             status,
             created_at,
-            customer_name,
-            phone,
-            email,
-            address,
             order_items (
               id,
               quantity,
@@ -230,7 +226,7 @@
           return;
         }
 
-        // ดึงข้อมูลเพิ่มเติมจากตาราง profiles หากมี user_id
+        // ดึงข้อมูลลูกค้าจากตาราง profiles แยกต่างหาก
         const userIds = [...new Set(orders.map(o => o.user_id).filter(Boolean))];
         let profilesMap = {};
 
@@ -247,21 +243,21 @@
               });
             }
           } catch (pErr) {
-            console.warn('ไม่สามารถดึงข้อมูลโปรไฟล์จาก profiles ได้:', pErr);
+            console.warn('ไม่สามารถดึงข้อมูลโปรไฟล์ได้:', pErr);
           }
         }
 
-        // จับคู่ข้อมูลจาก profiles และ orders โดยตรง
+        // รวมข้อมูล profiles เข้ากับออเดอร์
         allOrders = orders.map(order => {
           const userProfile = profilesMap[order.user_id] || {};
 
           return {
             ...order,
             profiles: {
-              full_name: userProfile.full_name || userProfile.name || order.customer_name || 'ไม่ระบุชื่อ',
-              phone: userProfile.phone || order.phone || '-',
-              email: userProfile.email || order.email || '-',
-              address: userProfile.address || order.address || 'ไม่ระบุที่อยู่จัดส่ง'
+              full_name: userProfile.full_name || userProfile.name || userProfile.username || 'ลูกค้าทั่วไป',
+              phone: userProfile.phone || userProfile.mobile || '-',
+              email: userProfile.email || '-',
+              address: userProfile.address || 'ไม่ระบุที่อยู่จัดส่ง'
             }
           };
         });
@@ -353,12 +349,12 @@
             <!-- Details Section -->
             <div class="p-5 grid grid-cols-1 md:grid-cols-12 gap-6 bg-white">
               
-              <!-- Customer & Shipping Info (ดึงจาก DB) -->
+              <!-- Customer & Shipping Info -->
               <div class="md:col-span-7 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
                 <div>
                   <div class="flex items-center gap-2 mb-3">
                     <i class="fa-regular fa-address-card text-amber-600 text-xs"></i>
-                    <h5 class="text-xs font-bold text-gray-800">ข้อมูลลูกค้าและการจัดส่ง (ดึงจากระบบ)</h5>
+                    <h5 class="text-xs font-bold text-gray-800">ข้อมูลลูกค้าและการจัดส่ง (ดึงจากโปรไฟล์)</h5>
                   </div>
                   <div class="grid grid-cols-2 gap-3 text-[11px] text-gray-600 mb-3">
                     <div>
