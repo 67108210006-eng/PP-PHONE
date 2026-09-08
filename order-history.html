@@ -64,26 +64,40 @@
       <p class="text-xs text-gray-400 mt-1">ดูประวัติและสถานะการสั่งซื้อทั้งหมด</p>
     </div>
 
-    <!-- Search Bar & Filters -->
-    <div class="bg-gray-100/70 p-3 rounded-2xl flex flex-wrap items-center justify-between gap-4 mb-6">
-      <div class="flex items-center gap-2">
-        <button onclick="filterOrders()" class="bg-[#8a6e11] text-white px-5 py-2 rounded-xl text-xs font-bold shadow-sm hover:bg-[#735b0e] transition">
+    <!-- Filter Bar & Search Container -->
+    <div class="bg-white/80 backdrop-blur-sm p-3 rounded-2xl border border-gray-100 flex flex-wrap items-center justify-between gap-4 mb-6 shadow-sm">
+      
+      <!-- Status Tabs -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+        <button onclick="setStatusFilter('all')" id="btnFilterAll" class="px-4 py-1.5 rounded-xl text-xs font-bold transition bg-[#8a6e11] text-white shadow-sm">
           ทั้งหมด
+        </button>
+        <button onclick="setStatusFilter('pending')" id="btnFilterPending" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span> รอตรวจสอบ
+        </button>
+        <button onclick="setStatusFilter('approved')" id="btnFilterApproved" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span> อนุมัติแล้ว
+        </button>
+        <button onclick="setStatusFilter('cancelled')" id="btnFilterCancelled" class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-red-500"></span> ยกเลิก
         </button>
       </div>
 
-      <div class="flex items-center gap-3 flex-1 max-w-md">
-        <div class="relative w-full">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-          <input type="text" id="searchInput" onkeyup="filterOrders()" placeholder="ค้นหารหัสคำสั่งซื้อ หรือรหัสลูกค้า..." class="w-full pl-9 pr-4 py-2 bg-white rounded-xl text-xs border border-gray-200 focus:outline-none focus:border-[#8a6e11]">
+      <!-- Search & Date Filter -->
+      <div class="flex items-center gap-3 flex-1 max-w-md w-full">
+        <div class="relative flex-1">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+          <input type="text" id="searchInput" onkeyup="filterOrders()" placeholder="ค้นหารหัสคำสั่งซื้อ, ชื่อลูกค้า, เบอร์โทร..." class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:border-[#8a6e11] transition">
         </div>
-        <input type="date" id="dateInput" onchange="filterOrders()" class="bg-white border border-gray-200 text-xs text-gray-600 py-2 px-3 rounded-xl focus:outline-none">
+        <div class="relative">
+          <input type="date" id="dateInput" onchange="filterOrders()" class="bg-gray-50 border border-gray-200 text-xs text-gray-600 py-2 px-3 rounded-xl focus:bg-white focus:outline-none focus:border-[#8a6e11] transition">
+        </div>
       </div>
     </div>
 
-    <!-- Orders Container -->
-    <div id="orderList" class="space-y-4">
-      <div class="bg-white rounded-2xl p-8 text-center text-gray-400 font-light shadow-sm">
+    <!-- Orders List Container -->
+    <div id="orderList" class="space-y-6">
+      <div class="bg-white rounded-2xl p-12 text-center text-gray-400 font-light shadow-sm">
         กำลังโหลดประวัติการสั่งซื้อ...
       </div>
     </div>
@@ -93,6 +107,7 @@
     let currentUser = {};
     let allOrders = [];
     let isAdminOrStaff = false;
+    let currentStatusFilter = 'all';
 
     document.addEventListener('DOMContentLoaded', async () => {
       try {
@@ -101,7 +116,6 @@
         currentUser = {};
       }
       
-      // ตรวจสอบ Role
       const role = String(
         currentUser.role || 
         (currentUser.userData && currentUser.userData.role) || 
@@ -110,14 +124,11 @@
 
       isAdminOrStaff = ['admin', 'staff', 'employee'].includes(role);
 
-      // ปรับแต่งการแสดงผลเมนูตามสิทธิ์ (Role)
       applyRolePermissions();
 
-      // ดึง User ID
       const userId = getUserId();
-      
-      // ตรวจสอบการล็อกอิน
       const isLoggedIn = currentUser && Object.keys(currentUser).length > 0;
+      
       if (!isLoggedIn || (!isAdminOrStaff && !userId)) {
         alert('กรุณาล็อกอินเข้าสู่ระบบก่อน');
         window.location.href = 'login.html';
@@ -152,7 +163,6 @@
         if (linkReport) linkReport.classList.add('hidden');
         if (cartBtn) cartBtn.classList.add('hidden');
       } else {
-        // สำหรับลูกค้า (Customer)
         if (linkManage) linkManage.classList.add('hidden');
         if (linkReport) linkReport.classList.add('hidden');
         if (cartBtn) cartBtn.classList.remove('hidden');
@@ -180,6 +190,7 @@
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
+        // Select Order & Include Profiles & Order Items
         let query = client
           .from('orders')
           .select(`
@@ -188,10 +199,20 @@
             total_amount,
             status,
             created_at,
+            shipping_method,
+            payment_slip_url,
+            payment_time,
+            profiles (
+              full_name,
+              phone,
+              email,
+              address
+            ),
             order_items (
               id,
               quantity,
               price,
+              color,
               products (
                 id,
                 name,
@@ -236,83 +257,299 @@
           day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
         });
 
+        const profile = order.profiles || {};
+        const customerName = profile.full_name || 'ไม่ระบุชื่อ';
+        const customerPhone = profile.phone || '-';
+        const customerEmail = profile.email || '-';
+        const customerAddress = profile.address || '-';
+        const status = order.status || 'pending';
+
         const orderCard = document.createElement('div');
         orderCard.className = 'bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden';
 
-        let itemsHtml = '';
-        (order.order_items || []).forEach(item => {
-          const product = item.products || {};
-          itemsHtml += `
-            <div class="flex items-center gap-4 p-4 bg-[#fbfbf9] rounded-xl my-2">
-              <div class="w-16 h-16 bg-white rounded-lg p-1 shrink-0 flex items-center justify-center border border-gray-100">
-                <img src="${product.image_url || 'https://via.placeholder.com/100'}" class="object-contain h-full w-full">
+        // โหมดแสดงผลแบบสมบูรณ์/ขยาย (สำหรับออเดอร์ที่รอตรวจสอบ หรือต้องการดูรายละเอียด)
+        if (status === 'pending' || isAdminOrStaff) {
+          let itemsHtml = '';
+          (order.order_items || []).forEach(item => {
+            const product = item.products || {};
+            itemsHtml += `
+              <div class="flex items-center justify-between gap-4 p-3 bg-gray-50/60 rounded-xl my-2">
+                <div class="flex items-center gap-3">
+                  <div class="w-14 h-14 bg-white rounded-lg p-1 shrink-0 flex items-center justify-center border border-gray-100">
+                    <img src="${product.image_url || 'https://via.placeholder.com/100'}" class="object-contain h-full w-full">
+                  </div>
+                  <div>
+                    <h4 class="font-bold text-gray-900 text-xs">${product.name || 'สินค้า'}</h4>
+                    <p class="text-[10px] text-gray-400 mt-0.5">สี: ${item.color || 'ไทเทเนียม'} | SKU: ${product.code || product.id}</p>
+                    <p class="text-[10px] text-gray-500 mt-0.5">จำนวน ${item.quantity} เครื่อง × ฿${Number(item.price).toLocaleString()}</p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <span class="text-xs font-extrabold text-gray-900">฿${Number(item.price * item.quantity).toLocaleString()}</span>
+                </div>
               </div>
-              <div class="flex-1">
-                <h4 class="font-bold text-gray-900 text-sm">${product.name || 'สินค้า'}</h4>
-                <p class="text-[11px] text-gray-400 mt-0.5">SKU: ${product.code || product.id}</p>
-                <p class="text-[11px] text-gray-500 mt-1">จำนวน: ${item.quantity}</p>
+            `;
+          });
+
+          orderCard.innerHTML = `
+            <!-- Header Status Bar -->
+            <div class="p-5 flex flex-wrap items-center justify-between gap-4 border-b border-gray-50">
+              <div class="flex items-center gap-8">
+                <div>
+                  <span class="text-[10px] text-gray-400 block font-medium">รหัสคำสั่งซื้อ</span>
+                  <span class="text-sm font-bold text-gray-900">ORD-${order.id}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-gray-400 block font-medium">วันที่ทำรายการ</span>
+                  <span class="text-xs font-semibold text-gray-600">${orderDate}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-gray-400 block font-medium">สถานะคำสั่งซื้อ</span>
+                  ${getStatusBadge(status)}
+                </div>
               </div>
+
               <div class="text-right">
-                <span class="text-sm font-extrabold text-[#8a6e11]">฿${Number(item.price * item.quantity).toLocaleString()}</span>
+                <span class="text-[10px] text-gray-400 block font-medium">ยอดชำระสุทธิ</span>
+                <span class="text-xl font-black text-gray-900">฿${Number(order.total_amount || 0).toLocaleString()}</span>
+              </div>
+            </div>
+
+            <!-- Details Section -->
+            <div class="p-5 grid grid-cols-1 md:grid-cols-12 gap-6 bg-white">
+              
+              <!-- Customer & Shipping Info -->
+              <div class="md:col-span-7 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center gap-2 mb-3">
+                    <i class="fa-regular fa-address-card text-amber-600 text-xs"></i>
+                    <h5 class="text-xs font-bold text-gray-800">ข้อมูลลูกค้าและการจัดส่ง</h5>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3 text-[11px] text-gray-600 mb-3">
+                    <div>
+                      <span class="text-gray-400 block text-[10px]">ผู้รับสินค้า</span>
+                      <span class="font-bold text-gray-800">${customerName} (CUS-${order.user_id})</span>
+                    </div>
+                    <div>
+                      <span class="text-gray-400 block text-[10px]">เบอร์โทรศัพท์</span>
+                      <span class="font-semibold text-gray-800">${customerPhone}</span>
+                    </div>
+                    <div>
+                      <span class="text-gray-400 block text-[10px]">อีเมล</span>
+                      <span class="text-gray-700">${customerEmail}</span>
+                    </div>
+                    <div>
+                      <span class="text-gray-400 block text-[10px]">วิธีจัดส่ง</span>
+                      <span class="font-medium text-gray-800">${order.shipping_method || 'Kerry Express (พัสดุด่วนพิเศษ)'}</span>
+                    </div>
+                  </div>
+                  <div class="text-[11px] text-gray-600 pt-2 border-t border-gray-100">
+                    <span class="text-gray-400 block text-[10px]">ที่อยู่จัดส่ง</span>
+                    <p class="mt-0.5 leading-relaxed">${customerAddress}</p>
+                  </div>
+                </div>
+
+                <!-- Product Items Box Inside -->
+                <div class="mt-4 pt-3 border-t border-gray-100">
+                  <h6 class="text-[11px] font-bold text-gray-700 mb-1">รายการสินค้าในออเดอร์</h6>
+                  ${itemsHtml}
+                </div>
+              </div>
+
+              <!-- Payment Slip & Approval Section -->
+              <div class="md:col-span-5 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                      <i class="fa-regular fa-file-lines text-amber-600 text-xs"></i>
+                      <h5 class="text-xs font-bold text-gray-800">หลักฐานการโอนเงิน (สลิปโอนเงิน)</h5>
+                    </div>
+                    <span class="text-[9px] bg-amber-100 text-amber-800 font-medium px-2 py-0.5 rounded">แนบเมื่อ ${order.payment_time || '14:32'}</span>
+                  </div>
+
+                  <!-- Slip Preview / Box -->
+                  <div class="bg-white p-3 rounded-lg border border-gray-200 flex items-center gap-3">
+                    <div class="w-12 h-14 bg-emerald-50 text-emerald-600 rounded border border-emerald-100 flex flex-col items-center justify-center shrink-0">
+                      <i class="fa-solid fa-receipt text-lg"></i>
+                      <span class="text-[7px] font-bold mt-1">K-PLUS</span>
+                    </div>
+                    <div class="text-[10px] text-gray-600 flex-1">
+                      <p class="font-medium">ธนาคารผู้โอน: <span class="font-bold text-gray-800">กสิกรไทย (KBANK)</span></p>
+                      <p class="text-gray-400 text-[9px]">เวลาโอน: ${orderDate}</p>
+                      <p class="font-bold text-[#8a6e11] mt-0.5">ยอดที่ระบุ: ฿${Number(order.total_amount).toLocaleString()}</p>
+                      <p class="text-gray-400 text-[9px]">เข้าบัญชี: PP PHONE</p>
+                      ${order.payment_slip_url ? `
+                        <a href="${order.payment_slip_url}" target="_blank" class="text-[9px] text-amber-700 underline flex items-center gap-1 mt-1 font-medium">
+                          <i class="fa-solid fa-arrow-up-right-from-square"></i> เปิดดูสลิปเต็มจอ
+                        </a>
+                      ` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Admin Action Buttons -->
+                ${isAdminOrStaff && status === 'pending' ? `
+                  <div class="mt-4 pt-3 border-t border-gray-100">
+                    <span class="text-[10px] font-bold text-gray-500 block mb-2">การอนุมัติคำสั่งซื้อ (เจ้าหน้าที่)</span>
+                    <div class="grid grid-cols-2 gap-2">
+                      <button onclick="updateOrderStatus('${order.id}', 'approved')" class="bg-[#795d0d] hover:bg-[#634c09] text-white py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-circle-check text-xs"></i> อนุมัติการชำระเงิน
+                      </button>
+                      <button onclick="updateOrderStatus('${order.id}', 'cancelled')" class="bg-white border border-red-200 hover:bg-red-50 text-red-600 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-circle-xmark text-xs"></i> ปฏิเสธ
+                      </button>
+                    </div>
+                  </div>
+                ` : ''}
               </div>
             </div>
           `;
-        });
+        } else {
+          // โหมดแสดงผลแบบกระชับ/ย่อ (Compact View) สำหรับคำสั่งซื้อที่อนุมัติแล้วหรือยกเลิก
+          orderCard.innerHTML = `
+            <div class="p-5 flex flex-wrap items-center justify-between gap-4">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-6 flex-1 items-center">
+                <div>
+                  <span class="text-[10px] text-gray-400 block font-medium">รหัสคำสั่งซื้อ</span>
+                  <span class="text-xs font-bold text-gray-900">ORD-${order.id}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-gray-400 block font-medium">วันที่ทำรายการ</span>
+                  <span class="text-xs font-semibold text-gray-600">${orderDate}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-gray-400 block font-medium">ลูกค้า</span>
+                  <span class="text-xs font-bold text-gray-800">${customerName} <span class="text-gray-400 font-normal">(CUS-${order.user_id})</span></span>
+                </div>
+                <div>
+                  <span class="text-[10px] text-gray-400 block font-medium">สถานะคำสั่งซื้อ</span>
+                  ${getStatusBadge(status)}
+                </div>
+              </div>
 
-        orderCard.innerHTML = `
-          <div class="p-5 flex flex-wrap items-center justify-between gap-4 border-b border-gray-50">
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-6 flex-1">
-              <div>
-                <span class="text-[10px] text-gray-400 block font-medium">รหัสคำสั่งซื้อ</span>
-                <span class="text-xs font-bold text-gray-900">ORD-${order.id}</span>
-              </div>
-              <div>
-                <span class="text-[10px] text-gray-400 block font-medium">วันที่</span>
-                <span class="text-xs font-semibold text-gray-700">${orderDate}</span>
-              </div>
-              <div>
-                <span class="text-[10px] text-gray-400 block font-medium">รหัสลูกค้า</span>
-                <span class="text-xs font-bold text-[#8a6e11]">${order.user_id || 'N/A'}</span>
+              <div class="flex items-center gap-6">
+                <div class="text-right">
+                  <span class="text-[10px] text-gray-400 block font-medium">ยอดรวม</span>
+                  <span class="text-lg font-black text-[#8a6e11]">฿${Number(order.total_amount || 0).toLocaleString()}</span>
+                </div>
+                <button onclick="viewReceipt('${order.id}')" class="flex items-center gap-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 px-3 py-1.5 rounded-xl text-xs font-semibold transition">
+                  <i class="fa-regular fa-file-lines"></i> ใบเสร็จ
+                </button>
               </div>
             </div>
-
-            <div class="flex items-center gap-4">
-              <div class="text-right">
-                <span class="text-[10px] text-gray-400 block font-medium">ยอดรวม</span>
-                <span class="text-base font-extrabold text-[#a17d1a]">฿${Number(order.total_amount || 0).toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="p-4 bg-gray-50/40">
-            <h5 class="text-xs font-bold text-gray-700 mb-2">รายการสินค้า</h5>
-            ${itemsHtml}
-          </div>
-        `;
+          `;
+        }
 
         container.appendChild(orderCard);
       });
     }
 
+    function getStatusBadge(status) {
+      if (status === 'approved' || status === 'completed') {
+        return `<span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-200/60">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> ชำระแล้ว (อนุมัติเรียบร้อย)
+        </span>`;
+      } else if (status === 'cancelled') {
+        return `<span class="inline-flex items-center gap-1.5 bg-red-50 text-red-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-red-200/60">
+          <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> ยกเลิกคำสั่งซื้อ
+        </span>`;
+      } else {
+        return `<span class="inline-flex items-center gap-1.5 bg-amber-50 text-amber-800 text-[10px] font-bold px-2.5 py-1 rounded-full border border-amber-200/60">
+          <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> รอตรวจสอบการชำระเงิน
+        </span>`;
+      }
+    }
+
+    function setStatusFilter(status) {
+      currentStatusFilter = status;
+
+      // Update Tab Styles
+      const buttons = {
+        all: document.getElementById('btnFilterAll'),
+        pending: document.getElementById('btnFilterPending'),
+        approved: document.getElementById('btnFilterApproved'),
+        cancelled: document.getElementById('btnFilterCancelled')
+      };
+
+      Object.keys(buttons).forEach(key => {
+        if (buttons[key]) {
+          if (key === status) {
+            buttons[key].className = 'px-4 py-1.5 rounded-xl text-xs font-bold transition bg-[#8a6e11] text-white shadow-sm';
+          } else {
+            buttons[key].className = 'px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-100 transition flex items-center gap-1.5';
+          }
+        }
+      });
+
+      filterOrders();
+    }
+
     function filterOrders() {
-      const search = document.getElementById('searchInput').value.toLowerCase();
+      const search = document.getElementById('searchInput').value.toLowerCase().trim();
       const selectedDate = document.getElementById('dateInput').value;
 
       const filtered = allOrders.filter(order => {
-        const matchesSearch = 
-          String(order.id).toLowerCase().includes(search) ||
-          String(order.user_id).toLowerCase().includes(search);
+        const profile = order.profiles || {};
+        const customerName = (profile.full_name || '').toLowerCase();
+        const customerPhone = (profile.phone || '').toLowerCase();
+        const orderIdStr = String(order.id).toLowerCase();
+        const userIdStr = String(order.user_id).toLowerCase();
 
+        // 1. Search filter
+        const matchesSearch = 
+          orderIdStr.includes(search) ||
+          userIdStr.includes(search) ||
+          customerName.includes(search) ||
+          customerPhone.includes(search);
+
+        // 2. Date filter
         let matchesDate = true;
         if (selectedDate) {
           const orderDateStr = new Date(order.created_at).toISOString().split('T')[0];
           matchesDate = (orderDateStr === selectedDate);
         }
 
-        return matchesSearch && matchesDate;
+        // 3. Status filter
+        let matchesStatus = true;
+        if (currentStatusFilter === 'pending') {
+          matchesStatus = (order.status === 'pending');
+        } else if (currentStatusFilter === 'approved') {
+          matchesStatus = (order.status === 'approved' || order.status === 'completed');
+        } else if (currentStatusFilter === 'cancelled') {
+          matchesStatus = (order.status === 'cancelled');
+        }
+
+        return matchesSearch && matchesDate && matchesStatus;
       });
 
       renderOrders(filtered);
+    }
+
+    async function updateOrderStatus(orderId, newStatus) {
+      if (!confirm(`คุณต้องการเปลี่ยนสถานะคำสั่งซื้อเป็น ${newStatus === 'approved' ? 'อนุมัติ' : 'ปฏิเสธ/ยกเลิก'} ใช่หรือไม่?`)) {
+        return;
+      }
+
+      try {
+        const client = DB.getClient();
+        const { error } = await client
+          .from('orders')
+          .update({ status: newStatus })
+          .eq('id', orderId);
+
+        if (error) throw error;
+
+        alert('อัปเดตสถานะเรียบร้อยแล้ว');
+        await loadOrderHistory();
+      } catch (err) {
+        console.error('Error updating order:', err);
+        alert('เกิดข้อผิดพลาดในการอัปเดตสถานะ: ' + err.message);
+      }
+    }
+
+    function viewReceipt(orderId) {
+      alert(`กำลังเปิดใบเสร็จสำหรับคำสั่งซื้อ ORD-${orderId}`);
+      // window.open(`receipt.html?orderId=${orderId}`, '_blank');
     }
 
     function logout() {
