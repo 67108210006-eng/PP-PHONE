@@ -190,7 +190,7 @@
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
-        // เอา color ออกจาก order_items select query เพื่อป้องกัน Error
+        // ดึงเฉพาะคอลัมน์ที่มีอยู่จริงในตาราง
         let query = client
           .from('orders')
           .select(`
@@ -199,9 +199,6 @@
             total_amount,
             status,
             created_at,
-            shipping_method,
-            payment_slip_url,
-            payment_time,
             order_items (
               id,
               quantity,
@@ -392,7 +389,7 @@
                       <i class="fa-regular fa-file-lines text-amber-600 text-xs"></i>
                       <h5 class="text-xs font-bold text-gray-800">หลักฐานการโอนเงิน (สลิปโอนเงิน)</h5>
                     </div>
-                    <span class="text-[9px] bg-amber-100 text-amber-800 font-medium px-2 py-0.5 rounded">แนบเมื่อ ${order.payment_time || '14:32'}</span>
+                    <span class="text-[9px] bg-amber-100 text-amber-800 font-medium px-2 py-0.5 rounded">แนบแล้ว</span>
                   </div>
 
                   <!-- Slip Preview / Box -->
