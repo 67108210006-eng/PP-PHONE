@@ -17,29 +17,46 @@
 </head>
 <body class="bg-[#f7f6f2] min-h-screen text-gray-800 flex flex-col">
 
-  <!-- Navigation Bar (คงสไตล์เดิม + จัดการสิทธิ์ซ่อน/แสดงแท็บตาม Role) -->
+  <!-- Navigation Bar (ปรับตามภาพ) -->
   <nav class="bg-white border-b border-gray-100 sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      
+      <!-- โลโก้ PP PHONE -->
       <a href="index.html" class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-full border-2 border-[#a17d1a] flex flex-col items-center justify-center text-[#a17d1a]">
+        <div class="w-10 h-10 rounded-full border-2 border-[#8a6e11] flex flex-col items-center justify-center text-[#8a6e11]">
           <span class="text-[11px] font-extrabold leading-none">PP</span>
           <span class="text-[7px] font-bold tracking-tighter leading-none mt-0.5">PHONE</span>
         </div>
-        <span class="text-xl font-extrabold text-[#a17d1a] tracking-wider">PP PHONE</span>
+        <span class="text-xl font-extrabold text-[#8a6e11] tracking-wider">PP PHONE</span>
       </a>
 
-      <!-- เมนูแท็บบน -->
-      <div class="flex items-center gap-6 text-xs font-semibold text-gray-600">
-        <a href="index.html" class="hover:text-[#a17d1a] transition">หน้าแรก</a>
-        <a href="index.html#products" class="hover:text-[#a17d1a] transition">สินค้า</a>
-        <a href="order-history.html" class="hover:text-[#a17d1a] transition">ประวัติการสั่งซื้อ</a>
-        <a href="manage-products.html" id="navProducts" class="hover:text-[#a17d1a] transition">จัดการสินค้า</a>
-        <a href="sales-report.html" id="navSales" class="hover:text-[#a17d1a] transition">รายงานยอดขาย</a>
-        
-        <div class="w-8 h-8 rounded-full bg-[#a17d1a] text-white flex items-center justify-center text-sm font-bold ml-2">
+      <!-- เมนูตรงกลาง -->
+      <div class="flex items-center gap-8 text-sm font-semibold text-gray-600">
+        <a href="index.html#products" class="hover:text-[#8a6e11] transition py-1">สินค้า</a>
+        <a href="order-history.html" class="hover:text-[#8a6e11] transition py-1">ประวัติการสั่งซื้อ</a>
+        <a href="manage-products.html" id="navProducts" class="hover:text-[#8a6e11] transition py-1 hidden">จัดการสินค้า</a>
+        <a href="sales-report.html" id="navSales" class="hover:text-[#8a6e11] transition py-1 hidden">รายงานยอดขาย</a>
+      </div>
+
+      <!-- ไอคอนขวามือ (ตะกร้า + โปรไฟล์ + ออกจากระบบ) -->
+      <div class="flex items-center gap-4">
+        <!-- ไอคอนตะกร้าสินค้า ( Active หน้าปัจจุบัน ) -->
+        <a href="cart.html" class="relative w-10 h-10 rounded-full bg-[#8a6e11] text-white flex items-center justify-center transition hover:opacity-90">
+          <i class="fa-solid fa-cart-shopping text-sm"></i>
+          <span id="navCartBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white">0</span>
+        </a>
+
+        <!-- ไอคอนโปรไฟล์ -->
+        <div class="w-10 h-10 rounded-full bg-[#8a6e11] text-white flex items-center justify-center text-base font-bold">
           <i class="fa-solid fa-user"></i>
         </div>
+
+        <!-- ปุ่มออกจากระบบ -->
+        <button onclick="logout()" class="text-xs font-bold text-red-500 hover:text-red-600 transition ml-1">
+          ออกจากระบบ
+        </button>
       </div>
+
     </div>
   </nav>
 
@@ -59,9 +76,9 @@
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <div class="flex justify-between items-center mb-4">
             <div class="flex items-center gap-2 font-bold text-gray-900 text-sm">
-              <i class="fa-solid fa-[#a17d1a] fa-truck-fast text-[#a17d1a]"></i> ข้อมูลผู้สั่งซื้อและการจัดส่ง
+              <i class="fa-solid fa-truck-fast text-[#8a6e11]"></i> ข้อมูลผู้สั่งซื้อและการจัดส่ง
             </div>
-            <button onclick="editUserInfo()" class="text-xs text-[#a17d1a] hover:underline font-semibold flex items-center gap-1">
+            <button onclick="editUserInfo()" class="text-xs text-[#8a6e11] hover:underline font-semibold flex items-center gap-1">
               <i class="fa-solid fa-pen-to-square"></i> แก้ไขข้อมูล
             </button>
           </div>
@@ -105,7 +122,7 @@
 
       </div>
 
-      <!-- ฝั่งขวา: สรุปคำสั่งซื้อ + ช่องทางชำระเงิน QR PromptPay + แนบสลิป -->
+      <!-- ฝั่งขวา: สรุปคำสั่งซื้อ + QR Code + แนบสลิป -->
       <div class="space-y-6">
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-5">
           <h2 class="text-lg font-bold text-gray-900 border-b pb-3">สรุปคำสั่งซื้อ</h2>
@@ -130,20 +147,19 @@
               <span class="font-bold text-sm text-gray-900 block">ยอดรวมทั้งสิ้น</span>
               <span class="text-[10px] text-gray-400">รวมภาษีมูลค่าเพิ่มแล้ว</span>
             </div>
-            <span id="totalPrice" class="text-2xl font-extrabold text-[#a17d1a]">฿0</span>
+            <span id="totalPrice" class="text-2xl font-extrabold text-[#8a6e11]">฿0</span>
           </div>
 
           <!-- กล่อง QR Code ชำระเงิน -->
           <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 text-center space-y-3">
             <div class="flex justify-between items-center text-xs">
               <span class="font-bold text-gray-700 flex items-center gap-1">
-                <i class="fa-solid fa-qrcode text-[#a17d1a]"></i> ชำระเงินผ่าน QR พร้อมเพย์
+                <i class="fa-solid fa-qrcode text-[#8a6e11]"></i> ชำระเงินผ่าน QR พร้อมเพย์
               </span>
-              <span class="bg-amber-100 text-[#a17d1a] font-bold text-[10px] px-2 py-0.5 rounded-full">PromptPay</span>
+              <span class="bg-amber-100 text-[#8a6e11] font-bold text-[10px] px-2 py-0.5 rounded-full">PromptPay</span>
             </div>
 
             <div class="bg-white p-3 rounded-xl inline-block border shadow-inner">
-              <!-- ตัวอย่าง QR Code สแกนจ่าย -->
               <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=PP_PHONE_PAYMENT" alt="QR Code PromptPay" class="w-36 h-36 mx-auto">
               <span class="text-[10px] text-gray-400 block mt-1">สแกนผ่าน Mobile Banking ได้ทุกธนาคาร</span>
             </div>
@@ -151,19 +167,19 @@
             <div class="text-[11px] text-gray-600 space-y-0.5 border-t border-gray-200 pt-2 text-left">
               <div class="flex justify-between"><span>ชื่อบัญชี:</span> <span class="font-bold">PP PHONE</span></div>
               <div class="flex justify-between"><span>เลขพร้อมเพย์:</span> <span class="font-bold font-mono">0105566012345</span></div>
-              <div class="flex justify-between"><span>ยอดชำระ:</span> <span id="qrPayAmount" class="font-extrabold text-[#a17d1a]">฿0</span></div>
+              <div class="flex justify-between"><span>ยอดชำระ:</span> <span id="qrPayAmount" class="font-extrabold text-[#8a6e11]">฿0</span></div>
             </div>
           </div>
 
           <!-- กล่องแนบสลิป -->
           <div>
             <label class="text-xs font-bold text-gray-700 block mb-2 flex items-center gap-1">
-              <i class="fa-solid fa-file-invoice-dollar text-[#a17d1a]"></i> แนบหลักฐานการโอนเงิน (สลิปโอนเงิน)
+              <i class="fa-solid fa-file-invoice-dollar text-[#8a6e11]"></i> แนบหลักฐานการโอนเงิน (สลิปโอนเงิน)
             </label>
-            <div onclick="document.getElementById('slipInput').click()" class="border-2 border-dashed border-gray-300 hover:border-[#a17d1a] rounded-2xl p-4 text-center cursor-pointer bg-gray-50 transition">
+            <div onclick="document.getElementById('slipInput').click()" class="border-2 border-dashed border-gray-300 hover:border-[#8a6e11] rounded-2xl p-4 text-center cursor-pointer bg-gray-50 transition">
               <input type="file" id="slipInput" accept="image/*" class="hidden" onchange="handleSlipUpload(event)">
               <div id="slipPlaceholder">
-                <div class="w-10 h-10 rounded-full bg-amber-50 text-[#a17d1a] flex items-center justify-center mx-auto mb-2">
+                <div class="w-10 h-10 rounded-full bg-amber-50 text-[#8a6e11] flex items-center justify-center mx-auto mb-2">
                   <i class="fa-solid fa-cloud-arrow-up text-lg"></i>
                 </div>
                 <p class="text-xs font-bold text-gray-700">คลิกเพื่ออัปโหลดสลิป หรือลากไฟล์มาที่นี่</p>
@@ -176,14 +192,14 @@
             </div>
           </div>
 
-          <button onclick="checkout()" id="checkoutBtn" class="w-full bg-[#a17d1a] hover:bg-[#896914] text-white py-3.5 rounded-xl text-xs font-bold transition shadow-md flex items-center justify-center gap-2">
+          <button onclick="checkout()" id="checkoutBtn" class="w-full bg-[#8a6e11] hover:bg-[#725a0d] text-white py-3.5 rounded-xl text-xs font-bold transition shadow-md flex items-center justify-center gap-2">
             <i class="fa-solid fa-lock"></i> ยืนยันการชำระเงิน <i class="fa-solid fa-arrow-right"></i>
           </button>
 
           <div class="flex justify-center gap-4 text-gray-400 text-xs pt-1">
-            <i class="fa-solid fa-[#a17d1a] fa-shield-halved" title="ปลอดภัย"></i>
+            <i class="fa-solid fa-shield-halved" title="ปลอดภัย"></i>
             <i class="fa-solid fa-credit-card" title="ชำระเงินสะดวก"></i>
-            <i class="fa-solid fa-truck" title-[#a17d1a]="ส่งไว"></i>
+            <i class="fa-solid fa-truck" title="ส่งไว"></i>
           </div>
         </div>
       </div>
@@ -197,13 +213,13 @@
     let slipFile = null;
 
     document.addEventListener('DOMContentLoaded', async () => {
-      // ดึงสิทธิ์ผู้ใช้งานเพื่อแสดง/ซ่อนเมนูด้านบน
+      // ตรวจสอบ Role เพื่อแสดงเมนูเพิ่มเติม ( admin / staff )
       const role = localStorage.getItem('pp_user_role') || 'customer';
-      if (role === 'customer') {
-        document.getElementById('navProducts')?.style.setProperty('display', 'none');
-        document.getElementById('navSales')?.style.setProperty('display', 'none');
+      if (role === 'admin') {
+        document.getElementById('navProducts')?.classList.remove('hidden');
+        document.getElementById('navSales')?.classList.remove('hidden');
       } else if (role === 'staff') {
-        document.getElementById('navSales')?.style.setProperty('display', 'none');
+        document.getElementById('navProducts')?.classList.remove('hidden');
       }
 
       currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
@@ -229,7 +245,6 @@
           || null;
     }
 
-    // แสดงข้อมูลลูกค้า
     function loadUserInfo() {
       const name = currentUser.firstName ? `${currentUser.firstName} ${currentUser.lastName}` : (currentUser.name || 'คุณสมชาย ใจดี');
       const phone = currentUser.phone || '081-234-5678';
@@ -251,7 +266,6 @@
       }
     }
 
-    // ดึงข้อมูลรายการสินค้าในตะกร้า
     async function loadCart() {
       const cartContainer = document.getElementById('cartList');
       const userId = getUserId();
@@ -272,7 +286,7 @@
             <div class="bg-white rounded-2xl p-12 text-center text-gray-400 font-light shadow-sm">
               <i class="fa-solid fa-basket-shopping text-4xl mb-3 text-gray-300"></i>
               <p>ไม่มีสินค้าในตะกร้าของคุณ</p>
-              <a href="index.html" class="inline-block mt-4 bg-[#a17d1a] text-white text-xs px-5 py-2 rounded-xl font-bold">ไปเลือกซื้อสินค้า</a>
+              <a href="index.html" class="inline-block mt-4 bg-[#8a6e11] text-white text-xs px-5 py-2 rounded-xl font-bold">ไปเลือกซื้อสินค้า</a>
             </div>`;
           updateSummary(0, 0);
           return;
@@ -304,7 +318,6 @@
       }
     }
 
-    // Render รายการสินค้าตามดีไซน์ในการ์ด
     function renderCart() {
       const cartContainer = document.getElementById('cartList');
       cartContainer.innerHTML = '';
@@ -328,7 +341,7 @@
             <div>
               <h3 class="font-bold text-gray-900 text-sm">${item.name || 'ไม่พบชื่อสินค้า'}</h3>
               <p class="text-[11px] text-gray-400 mt-0.5">${item.spec || item.storage || 'สินค้าลิขสิทธิ์แท้'}</p>
-              <p class="text-sm font-extrabold text-[#a17d1a] mt-2">฿${Number(item.price || 0).toLocaleString()}</p>
+              <p class="text-sm font-extrabold text-[#8a6e11] mt-2">฿${Number(item.price || 0).toLocaleString()}</p>
             </div>
           </div>
 
@@ -389,12 +402,12 @@
 
     function updateSummary(total, count) {
       document.getElementById('totalItemsCount').innerText = count;
+      document.getElementById('navCartBadge').innerText = count;
       document.getElementById('subtotalPrice').innerText = `฿${total.toLocaleString()}`;
       document.getElementById('totalPrice').innerText = `฿${total.toLocaleString()}`;
       document.getElementById('qrPayAmount').innerText = `฿${total.toLocaleString()}`;
     }
 
-    // จัดการการอัปโหลดสลิป
     function handleSlipUpload(event) {
       const file = event.target.files[0];
       if (file) {
@@ -409,7 +422,6 @@
       }
     }
 
-    // ยืนยันสั่งซื้อและชำระเงิน
     async function checkout() {
       if (cartItems.length === 0) {
         alert('ไม่มีสินค้าในตะกร้า');
@@ -438,7 +450,6 @@
         const userAddress = document.getElementById('displayUserAddress').innerText;
         const userPhone = document.getElementById('displayUserPhone').innerText;
 
-        // 1. บันทึกลงตาราง orders
         const { data: orderData, error: orderError } = await client
           .from('orders')
           .insert([{
@@ -454,7 +465,6 @@
 
         const newOrderId = orderData[0].id;
 
-        // 2. บันทึกลงตาราง order_items
         const orderItemsPayload = cartItems.map(item => ({
           order_id: newOrderId,
           product_id: item.product_id,
@@ -468,7 +478,6 @@
 
         if (itemsError) throw itemsError;
 
-        // 3. ลบสินค้าออกจากตะกร้า
         const { error: clearError } = await client
           .from('cart')
           .delete()
@@ -482,6 +491,14 @@
       } catch (err) {
         console.error('Checkout error:', err);
         alert('เกิดข้อผิดพลาดในการสั่งซื้อ: ' + err.message);
+      }
+    }
+
+    function logout() {
+      if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
+        localStorage.removeItem('pp_user_role');
+        localStorage.removeItem('currentUser');
+        window.location.href = 'login.html';
       }
     }
   </script>
