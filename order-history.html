@@ -103,7 +103,7 @@
     </div>
   </main>
 
-  <!-- Image Preview Modal (สำหรับคลิกดูรูปสลิปขนาดเต็ม) -->
+  <!-- Image Preview Modal -->
   <div id="imageModal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4 cursor-pointer" onclick="closeImageModal()">
     <div class="relative max-w-2xl w-full bg-white rounded-2xl p-3 shadow-2xl overflow-hidden flex flex-col items-center" onclick="event.stopPropagation()">
       <button onclick="closeImageModal()" class="absolute top-3 right-3 bg-gray-900/60 hover:bg-gray-900 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold z-10 transition">
@@ -202,9 +202,6 @@
           || null;
     }
 
-    // -----------------------------------------------------------
-    // HELPER: ดึง URL รูปภาพสลิปให้ถูกต้องและสมบูรณ์
-    // -----------------------------------------------------------
     function extractSlipUrl(order) {
       if (!order) return null;
 
@@ -217,12 +214,10 @@
         if (order[key] && typeof order[key] === 'string' && order[key].trim() !== '') {
           let url = order[key].trim();
 
-          // 1. ถ้าเป็น URL สมบูรณ์ หรือ Base64
           if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:image/')) {
             return url;
           }
 
-          // 2. ถ้าเป็น Storage Path ให้ขอ Public URL จาก Supabase Storage
           if (typeof DB !== 'undefined' && DB.getClient) {
             try {
               const client = DB.getClient();
@@ -238,13 +233,10 @@
       return null;
     }
 
-    // -----------------------------------------------------------
-    // HELPER: ดึง URL รูปสินค้าให้ถูกต้อง
-    // -----------------------------------------------------------
     function extractProductImageUrl(product) {
       if (!product) return 'https://via.placeholder.com/150?text=No+Image';
       
-      const imgKey = product.image_url || product.image || product.img || product.product_image;
+      const imgKey = product.image_url || product.img || product.product_image;
       if (!imgKey || typeof imgKey !== 'string' || imgKey.trim() === '') {
         return 'https://via.placeholder.com/150?text=No+Image';
       }
@@ -272,7 +264,7 @@
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
-        // ดึงข้อมูล orders ทั้งหมด
+        // แก้ไข: นำ image ออกจาก products(...) ด้านล่างเพื่อป้องกัน Column Not Exist
         let query = client
           .from('orders')
           .select(`
@@ -286,8 +278,7 @@
                 id,
                 name,
                 code,
-                image_url,
-                image
+                image_url
               )
             )
           `)
@@ -306,7 +297,6 @@
           return;
         }
 
-        // ดึงข้อมูลผู้ใช้งานจากตาราง users
         const userIds = [...new Set(orders.map(o => o.user_id).filter(Boolean))];
         let usersMap = {};
 
@@ -325,7 +315,6 @@
           }
         }
 
-        // รวมข้อมูลและหารูปสลิป
         allOrders = orders.map(order => {
           const u = usersMap[order.user_id] || {};
           const slipImage = extractSlipUrl(order);
@@ -405,7 +394,6 @@
           `;
         });
 
-        // แสดงผลกล่องรูปสลิป
         let slipHtml = '';
         if (order.slip_url) {
           slipHtml = `
@@ -430,7 +418,6 @@
         }
 
         orderCard.innerHTML = `
-          <!-- Header Status Bar -->
           <div class="p-5 flex flex-wrap items-center justify-between gap-4 border-b border-gray-50">
             <div class="flex items-center gap-6">
               <div>
@@ -453,10 +440,7 @@
             </div>
           </div>
 
-          <!-- Details Section -->
           <div class="p-5 grid grid-cols-1 md:grid-cols-12 gap-6 bg-white">
-            
-            <!-- Customer & Shipping Info -->
             <div class="md:col-span-7 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
               <div>
                 <div class="flex items-center gap-2 mb-3">
@@ -487,14 +471,12 @@
                 </div>
               </div>
 
-              <!-- Product Items Box -->
               <div class="mt-4 pt-3 border-t border-gray-100">
                 <h6 class="text-[11px] font-bold text-gray-700 mb-1">รายการสินค้าในออเดอร์</h6>
                 ${itemsHtml}
               </div>
             </div>
 
-            <!-- Payment Slip & Approval Section -->
             <div class="md:col-span-5 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
               <div>
                 <div class="flex items-center justify-between mb-3">
@@ -503,12 +485,9 @@
                     <h5 class="text-xs font-bold text-gray-800">หลักฐานการชำระเงิน (สลิปโอน)</h5>
                   </div>
                 </div>
-
-                <!-- Slip Display -->
                 ${slipHtml}
               </div>
 
-              <!-- Admin Action Buttons -->
               ${isAdminOrStaff && status === 'pending' ? `
                 <div class="mt-4 pt-3 border-t border-gray-100">
                   <span class="text-[10px] font-bold text-gray-500 block mb-2">การอนุมัติคำสั่งซื้อ (เจ้าหน้าที่)</span>
