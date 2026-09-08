@@ -429,12 +429,16 @@
         }
 
         orderCard.innerHTML = `
-          <!-- Header (คลิกที่พื้นที่ส่วนหัวเพื่อ toggle เปิด-ปิด ได้เหมือนเดิม) -->
+          <!-- Header (มีชื่อลูกค้าเพิ่มเข้ามาเรียบร้อยแล้ว) -->
           <div class="p-5 flex flex-wrap items-center justify-between gap-4 cursor-pointer hover:bg-gray-50/80 transition" onclick="toggleOrderDetail('${order.id}')">
             <div class="flex items-center gap-4 md:gap-6 flex-wrap">
               <div>
                 <span class="text-[10px] text-gray-400 block font-medium">รหัสคำสั่งซื้อ</span>
                 <span class="text-sm font-bold text-gray-900">ORD-${order.id}</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-gray-400 block font-medium">ชื่อลูกค้า</span>
+                <span class="text-xs font-bold text-gray-800">${customerName}</span>
               </div>
               <div>
                 <span class="text-[10px] text-gray-400 block font-medium">วันที่ทำรายการ</span>
