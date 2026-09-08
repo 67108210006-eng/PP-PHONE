@@ -190,7 +190,7 @@
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
-        // Select Order & Include Profiles & Order Items
+        // 1. ดึงข้อมูล orders และ order_items (หลีกเลี่ยงการ JOIN ข้ามไปยัง profiles โดยตรง)
         let query = client
           .from('orders')
           .select(`
@@ -202,12 +202,6 @@
             shipping_method,
             payment_slip_url,
             payment_time,
-            profiles (
-              full_name,
-              phone,
-              email,
-              address
-            ),
             order_items (
               id,
               quantity,
@@ -230,7 +224,44 @@
         const { data: orders, error } = await query;
         if (error) throw error;
 
-        allOrders = orders || [];
+        if (!orders || orders.length === 0) {
+          allOrders = [];
+          renderOrders([]);
+          return;
+        }
+
+        // 2. ดึงข้อมูล profiles แยกเพื่อป้องกันปัญหา Relationship Cache ใน Supabase
+        const userIds = [...new Set(orders.map(o => o.user_id).filter(Boolean))];
+        let profilesMap = {};
+
+        if (userIds.length > 0) {
+          try {
+            const { data: profiles } = await client
+              .from('profiles')
+              .select('*')
+              .in('id', userIds);
+
+            if (profiles) {
+              profiles.forEach(p => {
+                profilesMap[p.id] = p;
+              });
+            }
+          } catch (pErr) {
+            console.warn(' ไม่สามารถดึงข้อมูลโปรไฟล์ได้:', pErr);
+          }
+        }
+
+        // 3. รวมข้อมูล profiles กับ orders
+        allOrders = orders.map(order => ({
+          ...order,
+          profiles: profilesMap[order.user_id] || {
+            full_name: order.customer_name || 'ไม่ระบุชื่อ',
+            phone: order.phone || '-',
+            email: order.email || '-',
+            address: order.address || '-'
+          }
+        }));
+
         renderOrders(allOrders);
 
       } catch (err) {
@@ -267,7 +298,6 @@
         const orderCard = document.createElement('div');
         orderCard.className = 'bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden';
 
-        // โหมดแสดงผลแบบสมบูรณ์/ขยาย (สำหรับออเดอร์ที่รอตรวจสอบ หรือต้องการดูรายละเอียด)
         if (status === 'pending' || isAdminOrStaff) {
           let itemsHtml = '';
           (order.order_items || []).forEach(item => {
@@ -405,7 +435,6 @@
             </div>
           `;
         } else {
-          // โหมดแสดงผลแบบกระชับ/ย่อ (Compact View) สำหรับคำสั่งซื้อที่อนุมัติแล้วหรือยกเลิก
           orderCard.innerHTML = `
             <div class="p-5 flex flex-wrap items-center justify-between gap-4">
               <div class="grid grid-cols-2 md:grid-cols-4 gap-6 flex-1 items-center">
@@ -463,7 +492,6 @@
     function setStatusFilter(status) {
       currentStatusFilter = status;
 
-      // Update Tab Styles
       const buttons = {
         all: document.getElementById('btnFilterAll'),
         pending: document.getElementById('btnFilterPending'),
@@ -495,21 +523,18 @@
         const orderIdStr = String(order.id).toLowerCase();
         const userIdStr = String(order.user_id).toLowerCase();
 
-        // 1. Search filter
         const matchesSearch = 
           orderIdStr.includes(search) ||
           userIdStr.includes(search) ||
           customerName.includes(search) ||
           customerPhone.includes(search);
 
-        // 2. Date filter
         let matchesDate = true;
         if (selectedDate) {
           const orderDateStr = new Date(order.created_at).toISOString().split('T')[0];
           matchesDate = (orderDateStr === selectedDate);
         }
 
-        // 3. Status filter
         let matchesStatus = true;
         if (currentStatusFilter === 'pending') {
           matchesStatus = (order.status === 'pending');
@@ -549,7 +574,6 @@
 
     function viewReceipt(orderId) {
       alert(`กำลังเปิดใบเสร็จสำหรับคำสั่งซื้อ ORD-${orderId}`);
-      // window.open(`receipt.html?orderId=${orderId}`, '_blank');
     }
 
     function logout() {
