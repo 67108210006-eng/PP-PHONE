@@ -190,7 +190,7 @@
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
-        // ดึงเฉพาะคอลัมน์ที่มีอยู่จริงในตาราง
+        // ดึงข้อมูลรายการสั่งซื้อพร้อมข้อมูลลูกค้าจากฐานข้อมูล
         let query = client
           .from('orders')
           .select(`
@@ -199,6 +199,10 @@
             total_amount,
             status,
             created_at,
+            customer_name,
+            phone,
+            email,
+            address,
             order_items (
               id,
               quantity,
@@ -226,6 +230,7 @@
           return;
         }
 
+        // ดึงข้อมูลเพิ่มเติมจากตาราง profiles หากมี user_id
         const userIds = [...new Set(orders.map(o => o.user_id).filter(Boolean))];
         let profilesMap = {};
 
@@ -242,19 +247,24 @@
               });
             }
           } catch (pErr) {
-            console.warn('ไม่สามารถดึงข้อมูลโปรไฟล์ได้:', pErr);
+            console.warn('ไม่สามารถดึงข้อมูลโปรไฟล์จาก profiles ได้:', pErr);
           }
         }
 
-        allOrders = orders.map(order => ({
-          ...order,
-          profiles: profilesMap[order.user_id] || {
-            full_name: order.customer_name || 'ไม่ระบุชื่อ',
-            phone: order.phone || '-',
-            email: order.email || '-',
-            address: order.address || '-'
-          }
-        }));
+        // จับคู่ข้อมูลจาก profiles และ orders โดยตรง
+        allOrders = orders.map(order => {
+          const userProfile = profilesMap[order.user_id] || {};
+
+          return {
+            ...order,
+            profiles: {
+              full_name: userProfile.full_name || userProfile.name || order.customer_name || 'ไม่ระบุชื่อ',
+              phone: userProfile.phone || order.phone || '-',
+              email: userProfile.email || order.email || '-',
+              address: userProfile.address || order.address || 'ไม่ระบุที่อยู่จัดส่ง'
+            }
+          };
+        });
 
         renderOrders(allOrders);
 
@@ -283,10 +293,10 @@
         });
 
         const profile = order.profiles || {};
-        const customerName = profile.full_name || 'ไม่ระบุชื่อ';
-        const customerPhone = profile.phone || '-';
-        const customerEmail = profile.email || '-';
-        const customerAddress = profile.address || '-';
+        const customerName = profile.full_name;
+        const customerPhone = profile.phone;
+        const customerEmail = profile.email;
+        const customerAddress = profile.address;
         const status = order.status || 'pending';
 
         const orderCard = document.createElement('div');
@@ -343,17 +353,17 @@
             <!-- Details Section -->
             <div class="p-5 grid grid-cols-1 md:grid-cols-12 gap-6 bg-white">
               
-              <!-- Customer & Shipping Info -->
+              <!-- Customer & Shipping Info (ดึงจาก DB) -->
               <div class="md:col-span-7 bg-gray-50/50 p-4 rounded-xl border border-gray-100 flex flex-col justify-between">
                 <div>
                   <div class="flex items-center gap-2 mb-3">
                     <i class="fa-regular fa-address-card text-amber-600 text-xs"></i>
-                    <h5 class="text-xs font-bold text-gray-800">ข้อมูลลูกค้าและการจัดส่ง</h5>
+                    <h5 class="text-xs font-bold text-gray-800">ข้อมูลลูกค้าและการจัดส่ง (ดึงจากระบบ)</h5>
                   </div>
                   <div class="grid grid-cols-2 gap-3 text-[11px] text-gray-600 mb-3">
                     <div>
                       <span class="text-gray-400 block text-[10px]">ผู้รับสินค้า</span>
-                      <span class="font-bold text-gray-800">${customerName} (CUS-${order.user_id})</span>
+                      <span class="font-bold text-gray-800">${customerName}</span>
                     </div>
                     <div>
                       <span class="text-gray-400 block text-[10px]">เบอร์โทรศัพท์</span>
@@ -364,13 +374,13 @@
                       <span class="text-gray-700">${customerEmail}</span>
                     </div>
                     <div>
-                      <span class="text-gray-400 block text-[10px]">วิธีจัดส่ง</span>
-                      <span class="font-medium text-gray-800">${order.shipping_method || 'Kerry Express (พัสดุด่วนพิเศษ)'}</span>
+                      <span class="text-gray-400 block text-[10px]">รหัสผู้ใช้งาน</span>
+                      <span class="font-medium text-gray-800">${order.user_id || '-'}</span>
                     </div>
                   </div>
                   <div class="text-[11px] text-gray-600 pt-2 border-t border-gray-100">
                     <span class="text-gray-400 block text-[10px]">ที่อยู่จัดส่ง</span>
-                    <p class="mt-0.5 leading-relaxed">${customerAddress}</p>
+                    <p class="mt-0.5 leading-relaxed font-medium text-gray-800">${customerAddress}</p>
                   </div>
                 </div>
 
@@ -387,27 +397,20 @@
                   <div class="flex items-center justify-between mb-3">
                     <div class="flex items-center gap-2">
                       <i class="fa-regular fa-file-lines text-amber-600 text-xs"></i>
-                      <h5 class="text-xs font-bold text-gray-800">หลักฐานการโอนเงิน (สลิปโอนเงิน)</h5>
+                      <h5 class="text-xs font-bold text-gray-800">หลักฐานการชำระเงิน</h5>
                     </div>
-                    <span class="text-[9px] bg-amber-100 text-amber-800 font-medium px-2 py-0.5 rounded">แนบแล้ว</span>
+                    <span class="text-[9px] bg-amber-100 text-amber-800 font-medium px-2 py-0.5 rounded">ตรวจสอบแล้ว</span>
                   </div>
 
-                  <!-- Slip Preview / Box -->
+                  <!-- Slip Box -->
                   <div class="bg-white p-3 rounded-lg border border-gray-200 flex items-center gap-3">
                     <div class="w-12 h-14 bg-emerald-50 text-emerald-600 rounded border border-emerald-100 flex flex-col items-center justify-center shrink-0">
                       <i class="fa-solid fa-receipt text-lg"></i>
-                      <span class="text-[7px] font-bold mt-1">K-PLUS</span>
+                      <span class="text-[7px] font-bold mt-1">SUCCESS</span>
                     </div>
                     <div class="text-[10px] text-gray-600 flex-1">
-                      <p class="font-medium">ธนาคารผู้โอน: <span class="font-bold text-gray-800">กสิกรไทย (KBANK)</span></p>
-                      <p class="text-gray-400 text-[9px]">เวลาโอน: ${orderDate}</p>
-                      <p class="font-bold text-[#8a6e11] mt-0.5">ยอดที่ระบุ: ฿${Number(order.total_amount).toLocaleString()}</p>
-                      <p class="text-gray-400 text-[9px]">เข้าบัญชี: PP PHONE</p>
-                      ${order.payment_slip_url ? `
-                        <a href="${order.payment_slip_url}" target="_blank" class="text-[9px] text-amber-700 underline flex items-center gap-1 mt-1 font-medium">
-                          <i class="fa-solid fa-arrow-up-right-from-square"></i> เปิดดูสลิปเต็มจอ
-                        </a>
-                      ` : ''}
+                      <p class="font-medium">ทำรายการเมื่อ: <span class="font-bold text-gray-800">${orderDate}</span></p>
+                      <p class="font-bold text-[#8a6e11] mt-0.5">ยอดชำระ: ฿${Number(order.total_amount).toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -418,7 +421,7 @@
                     <span class="text-[10px] font-bold text-gray-500 block mb-2">การอนุมัติคำสั่งซื้อ (เจ้าหน้าที่)</span>
                     <div class="grid grid-cols-2 gap-2">
                       <button onclick="updateOrderStatus('${order.id}', 'approved')" class="bg-[#795d0d] hover:bg-[#634c09] text-white py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-circle-check text-xs"></i> อนุมัติการชำระเงิน
+                        <i class="fa-solid fa-circle-check text-xs"></i> อนุมัติ
                       </button>
                       <button onclick="updateOrderStatus('${order.id}', 'cancelled')" class="bg-white border border-red-200 hover:bg-red-50 text-red-600 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
                         <i class="fa-solid fa-circle-xmark text-xs"></i> ปฏิเสธ
@@ -443,7 +446,7 @@
                 </div>
                 <div>
                   <span class="text-[10px] text-gray-400 block font-medium">ลูกค้า</span>
-                  <span class="text-xs font-bold text-gray-800">${customerName} <span class="text-gray-400 font-normal">(CUS-${order.user_id})</span></span>
+                  <span class="text-xs font-bold text-gray-800">${customerName}</span>
                 </div>
                 <div>
                   <span class="text-[10px] text-gray-400 block font-medium">สถานะคำสั่งซื้อ</span>
@@ -515,6 +518,7 @@
         const profile = order.profiles || {};
         const customerName = (profile.full_name || '').toLowerCase();
         const customerPhone = (profile.phone || '').toLowerCase();
+        const customerAddress = (profile.address || '').toLowerCase();
         const orderIdStr = String(order.id).toLowerCase();
         const userIdStr = String(order.user_id).toLowerCase();
 
@@ -522,7 +526,8 @@
           orderIdStr.includes(search) ||
           userIdStr.includes(search) ||
           customerName.includes(search) ||
-          customerPhone.includes(search);
+          customerPhone.includes(search) ||
+          customerAddress.includes(search);
 
         let matchesDate = true;
         if (selectedDate) {
