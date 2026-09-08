@@ -190,7 +190,7 @@
         const client = DB.getClient ? DB.getClient() : null;
         if (!client) throw new Error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้');
 
-        // 1. ดึงข้อมูล orders และ order_items (หลีกเลี่ยงการ JOIN ข้ามไปยัง profiles โดยตรง)
+        // เอา color ออกจาก order_items select query เพื่อป้องกัน Error
         let query = client
           .from('orders')
           .select(`
@@ -206,7 +206,6 @@
               id,
               quantity,
               price,
-              color,
               products (
                 id,
                 name,
@@ -230,7 +229,6 @@
           return;
         }
 
-        // 2. ดึงข้อมูล profiles แยกเพื่อป้องกันปัญหา Relationship Cache ใน Supabase
         const userIds = [...new Set(orders.map(o => o.user_id).filter(Boolean))];
         let profilesMap = {};
 
@@ -247,11 +245,10 @@
               });
             }
           } catch (pErr) {
-            console.warn(' ไม่สามารถดึงข้อมูลโปรไฟล์ได้:', pErr);
+            console.warn('ไม่สามารถดึงข้อมูลโปรไฟล์ได้:', pErr);
           }
         }
 
-        // 3. รวมข้อมูล profiles กับ orders
         allOrders = orders.map(order => ({
           ...order,
           profiles: profilesMap[order.user_id] || {
@@ -302,6 +299,7 @@
           let itemsHtml = '';
           (order.order_items || []).forEach(item => {
             const product = item.products || {};
+            const colorInfo = item.color ? `สี: ${item.color} | ` : '';
             itemsHtml += `
               <div class="flex items-center justify-between gap-4 p-3 bg-gray-50/60 rounded-xl my-2">
                 <div class="flex items-center gap-3">
@@ -310,7 +308,7 @@
                   </div>
                   <div>
                     <h4 class="font-bold text-gray-900 text-xs">${product.name || 'สินค้า'}</h4>
-                    <p class="text-[10px] text-gray-400 mt-0.5">สี: ${item.color || 'ไทเทเนียม'} | SKU: ${product.code || product.id}</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">${colorInfo}SKU: ${product.code || product.id}</p>
                     <p class="text-[10px] text-gray-500 mt-0.5">จำนวน ${item.quantity} เครื่อง × ฿${Number(item.price).toLocaleString()}</p>
                   </div>
                 </div>
