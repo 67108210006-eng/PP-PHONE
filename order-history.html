@@ -92,11 +92,9 @@
                  class="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#8a6e11] focus:bg-white transition">
         </div>
 
-        <!-- ตัวเลือกช่วงวันที่ -->
+        <!-- ตัวเลือกวันที่ (เหลือ 1 ช่อง) -->
         <div class="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl px-2 py-1">
-          <input type="date" id="startDate" onchange="filterOrders()" class="bg-transparent text-xs text-gray-600 focus:outline-none">
-          <span class="text-xs text-gray-400 font-light">-</span>
-          <input type="date" id="endDate" onchange="filterOrders()" class="bg-transparent text-xs text-gray-600 focus:outline-none">
+          <input type="date" id="filterDate" onchange="filterOrders()" class="bg-transparent text-xs text-gray-600 focus:outline-none">
         </div>
 
         <!-- ปุ่มล้างตัวกรองวันที่/ค้นหา -->
@@ -679,8 +677,7 @@
 
     function filterOrders() {
       const searchKeyword = (document.getElementById('searchInput').value || '').toLowerCase().trim();
-      const startDateVal = document.getElementById('startDate').value;
-      const endDateVal = document.getElementById('endDate').value;
+      const filterDateVal = document.getElementById('filterDate').value;
 
       const filtered = allOrders.filter(order => {
         const st = String(order.status || '').toLowerCase().trim();
@@ -702,18 +699,9 @@
         }
 
         let matchesDate = true;
-        if (order.created_at) {
-          const orderDate = new Date(order.created_at);
-          if (startDateVal) {
-            const start = new Date(startDateVal);
-            start.setHours(0, 0, 0, 0);
-            if (orderDate < start) matchesDate = false;
-          }
-          if (endDateVal && matchesDate) {
-            const end = new Date(endDateVal);
-            end.setHours(23, 59, 59, 999);
-            if (orderDate > end) matchesDate = false;
-          }
+        if (filterDateVal && order.created_at) {
+          const orderDateStr = new Date(order.created_at).toISOString().split('T')[0];
+          matchesDate = (orderDateStr === filterDateVal);
         }
 
         return matchesStatus && matchesSearch && matchesDate;
@@ -724,29 +712,8 @@
 
     function resetFilters() {
       document.getElementById('searchInput').value = '';
-      document.getElementById('startDate').value = '';
-      document.getElementById('endDate').value = '';
+      document.getElementById('filterDate').value = '';
       setStatusFilter('all');
-    }
-
-    async function updateCartBadge() {
-      try {
-        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-        const count = cart.reduce((total, item) => total + (item.quantity || 1), 0);
-        const badge = document.getElementById('cartCount');
-        if (badge) badge.innerText = count;
-      } catch (e) {
-        console.warn('Error updating cart count:', e);
-      }
-    }
-
-    function logout() {
-      if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
-        localStorage.removeItem('currentUser');
-        localStorage.removeItem('userSession');
-        localStorage.removeItem('pp_user_role');
-        window.location.href = 'login.html';
-      }
     }
   </script>
 </body>
